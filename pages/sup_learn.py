@@ -54,16 +54,6 @@ if 'data_file_data' in st.session_state:
             y_sup = data
             y_sup = y_sup.dropna()
 
-            ohe_toggle = st.checkbox(label='Enable One-Hot-Encoding')
-
-            #TODO: Implement OneHotEncoding
-            #if ohe_toggle:
-            #    cat_features = data.select_dtypes(exclude=[np.number])
-            #    ohe = OneHotEncoder(categories='auto',
-            #                        sparse_output=False,
-            #                        handle_unknown='error',
-            #
-            #                       )
 
             # TODO: Make it so that the last column is the target variable automatically
             target_sup = st.selectbox('Choose Target',
@@ -83,8 +73,9 @@ if 'data_file_data' in st.session_state:
                                                    min_value=0.0,
                                                    value=0.75,
                                                    step=0.01,
-                                                   format="%.2f")
+                                                   format="%.2f",)
             X_train, X_test, y_train, y_test = train_test_split(X_sup, y_sup, train_size=train_proportion)
+
             # End Train Test Split Code ------------------------------------------------------------------------------------
 
             st.divider()
@@ -281,7 +272,7 @@ if 'data_file_data' in st.session_state:
                                                      value=100)
                     #Selecting Criterion
                     selected_criterion = st.selectbox('Select a Criterion',
-                                                      ('Gini', 'Entropy', ' Log Loss'))
+                                                      ('Gini', 'Entropy', 'Log Loss'))
                     if selected_criterion == "Log Loss":
                         selected_criterion = "log_loss"
                     else:
@@ -455,3 +446,5 @@ if 'data_file_data' in st.session_state:
 
     with pred_tab:
         st.text('Work in progress')
+
+        pred_data = st.file_uploader('Upload a prediction data file', type = 'csv')
