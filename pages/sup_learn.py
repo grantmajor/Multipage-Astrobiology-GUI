@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
     mean_absolute_percentage_error, mean_absolute_error, root_mean_squared_error, mean_squared_error
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, HistGradientBoostingRegressor
 from sklearn import svm
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from sklearn.utils.validation import check_is_fitted
@@ -310,79 +310,104 @@ if 'data_file_data' in st.session_state:
             # End Classification Code --------------------------------------------------------------------------------------
 
             if not X_sup.empty and not y_sup.empty:
+                st.session_state['unfitted_model'] = selected_model
                 selected_model.fit(X_train, y_train_encoded)
 
             # End Model Training Code ------------------------------------------------------------------------------------------
 
             # Begin Model Metrics Code -----------------------------------------------------------------------------------------
             with col2:
-                st.subheader('Model Metrics')
-
-
-                # check box for showing model metrics
+                st.subheader("Model Performance Metrics")
                 if not X_sup.empty:
                     y_pred_encoded = selected_model.predict(X_test)
                 else:
                     st.warning("Select explanatory variables to continue.")
+
+                # Begin Cross Validation Code --------------------------------------------------------------------------
+                with st.expander('Cross Validation'):
+                    if 'cv_confirmation' not in st.session_state:
+                        st.session_state['cv_confirmation'] = False
+
+                    if 'cv_ran' not in st.session_state:
+                        st.session_state['cv_ran'] = False
+
+                    if not st.session_state['cv_ran'] and not st.session_state['cv_confirmation']:
+                        st.warning("Cross validation can be computationally expensive. The number of folds has "
+                                    "been limited to 10.")
+                        if st.button("I understand"):
+                            st.session_state['cv_confirmation'] = True
+                            st.rerun()
+
+                    else:
+                        cv_folds = st.number_input('Enter number of cross validation folds',
+                                                   min_value = 2,
+                                                   max_value = 10,
+                                                   step = 1)
+
+                        if st.button('Begin Cross Validation'):
+                            cv_scores = cross_validate(st.session_state['unfitted_model'],
+                                                       X_train, y_train,
+                                                       cv = cv_folds)
+                        #TODO: Figure out what scores to output from cross validation
+                # End Cross Validation Code ---------------------------------------------------------------------------
 
                 if options_sup == 'Classification':
                     try:
                         check_is_fitted(selected_model)
                     except NotFittedError as e:
                         st.warning('Model has not been fitted to data. Metrics cannot be shown.')
-                    st.header("Model Performance Metrics")
+
 
                     # Begin Classification Report Code--------------------------------------------------------------------------
                     class_report = classification_report(y_test_encoded, y_pred_encoded, output_dict = True)
-                    st.subheader("Classification Report")
-                    class_report = pd.DataFrame(class_report).transpose()
-                    st.table(class_report)
+                    with st.expander('Classification Report'):
+                        class_report = pd.DataFrame(class_report).transpose()
+                        st.table(class_report)
 
                     #End Classification Report Code ----------------------------------------------------------------------------
 
                     #Begin Confusion Matrix Code ----------------- -------------------------------------------------------------
-                    st.subheader('Confusion Matrix')
-                    conf_mat = confusion_matrix(y_test_encoded, y_pred_encoded)
+                    with st.expander('Confusion Matrix'):
+                        conf_mat = confusion_matrix(y_test_encoded, y_pred_encoded)
 
-                    # Define custom labels
-                    class_names = label_encoder.classes_
-                    annot_labels = np.array([[str(cell) for cell in row] for row in conf_mat])
+                        # Define custom labels
+                        class_names = label_encoder.classes_
+                        annot_labels = np.array([[str(cell) for cell in row] for row in conf_mat])
 
-                    # Reset any existing figures
-                    plt.close('all')
+                        # Reset any existing figures
+                        plt.close('all')
 
-                    # Create themed figure
-                    fig, ax = plt.subplots(figsize=(6, 4))
-                    fig.set_facecolor('#0e1117')
-                    ax.set_facecolor('#0e1117')
+                        # Create themed figure
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        fig.set_facecolor('#0e1117')
+                        ax.set_facecolor('#0e1117')
 
 
-                    sns.heatmap(conf_mat,
-                                annot=annot_labels,
-                                fmt='',
-                                cmap='Blues',
-                                cbar=True,
-                                xticklabels=class_names,
-                                yticklabels=class_names,
-                                linewidths=0.5,
-                                linecolor='#0e1117',
-                                ax=ax)
+                        sns.heatmap(conf_mat,
+                                    annot=annot_labels,
+                                    fmt='',
+                                    cmap='Blues',
+                                    cbar=True,
+                                    xticklabels=class_names,
+                                    yticklabels=class_names,
+                                    linewidths=0.5,
+                                    linecolor='#0e1117',
+                                    ax=ax)
 
-                    # Style text and axes
-                    ax.set_title('Confusion Matrix', color='white')
-                    ax.set_xlabel('Predicted', color='white')
-                    ax.set_ylabel('Actual', color='white')
-                    ax.tick_params(colors='white', labelsize=10)
+                        # Style text and axes
+                        ax.set_title('Confusion Matrix', color='white')
+                        ax.set_xlabel('Predicted', color='white')
+                        ax.set_ylabel('Actual', color='white')
+                        ax.tick_params(colors='white', labelsize=10)
 
-                    # Style colorbar ticks
-                    cbar = ax.collections[0].colorbar
-                    cbar.ax.yaxis.set_tick_params(color='white')
-                    plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
+                        # Style colorbar ticks
+                        cbar = ax.collections[0].colorbar
+                        cbar.ax.yaxis.set_tick_params(color='white')
+                        plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
 
-                    fig.tight_layout()
-                    st.pyplot(fig)
+                        fig.tight_layout()
+                        st.pyplot(fig)
 
-                    st.divider()
                     # End Confusion Matrix Code---------------------------------------------------------------------------------
 
                 # End Classification Metrics Code ------------------------------------------------------------------------------

@@ -1,9 +1,10 @@
 import streamlit as st
+import pandas as pd
 
 st.header('Important Definitions')
 
 
-general_terms_tab, models_tab, model_metrics_tab = st.tabs(['ML Terms', 'Models', 'Model Metrics'])
+general_terms_tab, preprocessing_tab, models_tab, model_metrics_tab = st.tabs(['ML Terms', 'Preprocessing', 'Models', 'Model Metrics'])
 
 
 #Begin General Terms Tab
@@ -12,7 +13,7 @@ with general_terms_tab:
     #Supervised learning
     with st.expander('What is Supervised Learning?'):
         st.markdown("Supervised learning is a type of machine learning that is trained on labeled data sets. Labeled data sets "
-                    "provide the algorithim with the correct output value to allow for the model to correct itself over iterations. "
+                    "provide the algorithm with the correct output value to allow for the model to correct itself over iterations. "
                     "Supervised learning is used to predict the outcomes of unseen data and can be split into two main branches: "
                     "classification and regression.")
         st.markdown("**Classification**:  \nClassification is used to assign data into different categories or classes. A common "
@@ -48,44 +49,76 @@ with general_terms_tab:
                     "of models that are too simple to recognize relationships and patters in data.")
 #End General Terms Tab
 
+#Begin Preprocessing Tab
+with preprocessing_tab:
+
+    st.subheader("Feature Scaling")
+    with st.expander("What is Min-max Scaling"):
+        st.markdown("Placeholder")
+
+    with st.expander("What is Standardization"):
+        st.markdown("Placeholder")
+
+
 #Begin Models Tab
 with models_tab:
     st.subheader('Classification Models')
 
     with st.expander('k-Nearest Neighbors'):
-        st.markdown("k-Nearest Neighbors (k-NN) is an algorithim that classifies new samples according to the class of the "
-                    "samples closest to them (i.e, their nearest neighbors). The number of samples that the algorithim takes "
+        st.markdown("k-Nearest Neighbors (k-NN) is an algorithm  that classifies new samples according to the class of the "
+                    "samples closest to them (i.e, their nearest neighbors). The number of samples that the algorithm  takes "
                     "into account is defined by the parameter k. Suppose that of the k nearest neighbors, some neighbors have "
                     "different classes. In this case one of two approaches are typically used to decide the new sample's class.  \n")
 
         st.markdown("  \n1. **Simple Majority**: The new sample's class will be set to whichever class has the greatest proportion "
                     "of the k nearest neighbors.  "
-                    "\n 2. **Distance Weighted Voting**: Typically called Weighted k-NN, this algorithim gives additional weight "
+                    "\n 2. **Distance Weighted Voting**: Typically called Weighted k-NN, this algorithm  gives additional weight "
                     "to neighbors that are closer to the new sample and reduces the weight for neighbors that are further "
                     "away from the sample. This makes neighbors closest to the new sample have a greater impact on the sample's "
                     "final class.")
 
     with st.expander('Random Forest Classifier'):
-        st.markdown("The Random Forest Classifier is an algorithim that uses a collection of decision "
+        st.markdown("The Random Forest Classifier is an algorithm  that uses a collection of decision "
                     "trees to classify new samples. This collection of decision trees is called a forest. Since each decision "
                     "tree is trained on a different portion of the data, each decision tree is likely different from the others. "
                     "After each decision tree has produced an output, a simple majority is taken to determine the "
-                    "final output of the algorithim.")
+                    "final output of the algorithm .")
 
     with st.expander('Support Vector Machine'):
-        st.markdown('placeholder')
+        col1, col2 = st.columns(2, border = True)
+        with col1:
+            st.markdown("The Support Vector Machine algorithm seeks to classify samples by finding a hyperplane that best separates the data into two classes. "
+                    "To maximize the hyperplanes margin, the algorithm takes the two closest data points to the hyperplane "
+                    "(i.e the support vectors) and plots the hyperplane that maximizes the margin between the support vectors.")
+        with col2:
+            st.image('./assets/svm_diagram.png',
+                 caption = "Two-dimensional example of a Support Vector Machine's hyperplane")
 
 
     st.subheader('Regression Models')
 
-    with st.expander('Histogram-Based Gradient Regression Tree'):
-        st.markdown('placeholder')
+    with st.expander('Histogram-Based Gradient Boosting Regression Tree'):
+        st.markdown("To understand the Histogram-Based Gradient Regression Tree (HistGBRT) it helps to understand how a "
+                    "conventional Gradient Boosted Regression Tree (GBRT) works.  \n  \n"
+                    "**GBRT**: Conventional gradient boosting uses an ensemble of decision trees to predict a continuous value. "
+                    "These trees are combined one at a time with each subsequent tree aiming to fix the errors of the current ensemble of trees. "
+                    "Gradient boosting starts with a prediction, which is usually the mean of the target variable. "
+                    "Next, the algorithm calculates the residuals (i.e the difference between the predicted value and the actual value). "
+                    "Then, the algorithm fits a new decision tree which aims to predict the newly calculated residuals. "
+                    "Using the results of the new decision tree, the algorithm updates the predictions using the following formula:")
+        st.latex(r"\text{new predictions} = \text{old prediction} + \text{learning rate} * \text{tree prediction} ")
+        st.markdown("The algorithm repeats the residual calculations and prediction calculations for many iterations.  \n")
+        st.markdown("**HistGBRT**: The HistGBRT operates similarly to the GBRT algorithm, however, instead of performing calculations "
+                    "on each continuous feature value, the algorithm sorts them into bins, or buckets, of values. With these bins, "
+                    "the algorithm can reduce the total number of calculations required to fit each decision tree. "
+                    "This significantly reduces the computational cost and time to train the model, especially for large datasets.")
 
     with st.expander('Random Forest Regressor'):
-        st.markdown('placeholder')
+        st.markdown("The Random Forest Regressor utilizes the same principles of the Random Forest Classifier model, however, "
+                    "instead of taking a simple majority vote of its constituent trees, it averages the trees to get the predicted value.")
 
     with st.expander('Ridge Regressor'):
-        st.markdown('placeholder')
+        st.markdown("Ridge regression is a form of linear regression that penalizes terms to prevent the model from being overfit to the training data.")
 
 #End Models Tab
 
@@ -129,21 +162,95 @@ with model_metrics_tab:
 
     st.subheader('Regression Metrics')
 
-    #MSE
-    with st.expander('What is Mean Squared Error (MSE)?'):
-        st.text("placeholder")
+    #MSE and RMSE
+    with st.expander('What is Mean Squared Error (MSE) and Root Mean Squared Error (RMSE)?'):
+        st.markdown("**MSE**")
+        st.markdown("Mean Squared Error (MSE) is a regression metric that measures the accuracy of a model. MSE gives a larger penalty "
+                    "to large errors which increases it's sensitivity to outliers. ")
+        st.latex(r"\text{MSE} = \frac{1}{n} \sum^{n}_{i=1}(Y_i - \hat{Y}i)^2")
+        st.markdown("In simpler terms, the MSE squares the difference between the actual value and the predicted value of a data point. "
+                    "It then adds the squared differences for every data point. This summation is then divided by the total number of "
+                    "data points, finally giving the MSE.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Pros:**\n\n- MSE is an easily understandable measure of a model's accuracy.\n- Easily calculated")
+        with col2:
+            st.markdown("**Cons:**\n\n"
+                        "- Highly sensitive to outliers\n"
+                        "- The units of MSE are squared units. Suppose the target is housing prices, then the units of MSE would be dollars².")
 
-    #RMSE
-    with st.expander('What is Root Mean Squared Error (RMSE)?'):
-        st.text("placeholder")
+        st.markdown("**RMSE**")
+        st.markdown("Root Mean Squared Error (RMSE) is simply the square root of the MSE value. They share many of the same "
+                    "pros and cons. However, RMSE gives the units of the target variable instead of square units, thus making "
+                    "it easier to interpret.")
 
     #MAE
     with st.expander('What is Mean Absolute Error (MAE)?'):
-        st.text("placeholder")
+        st.markdown("Mean Absolute Error (MAE) measures the average difference between predicted and actual values. For example, "
+                    "a MAE score of 5 indicates that, on average, each prediction is approximately 5 units away from its true value.")
+        st.latex(r"\text{MAE} = \frac{1}{n} \sum^{n}_{i=1} |Y_i - \hat{Y}_i|")
+        col1, col2  = st.columns(2)
+
+        with col1:
+            st.markdown("**Pros**\n\n"
+                        "- Same units as target variable\n"
+                        "- Less sensitive to outliers\n")
+        with col2:
+            st.markdown("**Cons**\n\n"
+                        "- Since outliers are not penalized, MAE underreacts to them\n"
+                        "- Absolute value function is non-differentiable at 0, so metric is not ideal for gradient-based models.")
 
     #MAPE
     with st.expander('What is Mean Absolute Percentage Error (MAPE)?'):
-        st.text("placeholder")
+        st.markdown("The Mean Absolute Percentage Error measures how far off the model's predictions are as a percentage. "
+                    "For instance, if the MAPE score was 10, then the model's predictions are off by 10% of the actual values, on average.")
+        st.latex(r"\text{MAPE} = \frac{100\%}{n} \sum^{n}_{i=1} \left| \frac{Y_i - \hat{Y}_i}{Y_i} \right|")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Pros**\n\n"
+                        "- Easy to interpret\n"
+                        "- Standardized across datasets, error is a percentage instead of a unit-dependent value")
+        with col2:
+            st.markdown("**Cons**\n\n"
+                        "- In the case that the actual value is zero, the formula will divide by zero, resulting in an undefined equation.\n"
+                        "- MAPE cannot handle negative target values.\n"
+                        "- Low actual values cause the MAPE calculation to exaggerate the impact of errors. ")
+
+
+    with st.expander('Which Metric Should I Use?'):
+
+        data = {
+            "Metric": ["MSE", "RMSE", "MAE", "MAPE"],
+            "Use Case": [
+                "• Use when large errors should be penalized heavily\n• Use when model should be sensitive to outliers",
+                "• Use when MSE the benefits of MSE are desired, but in the target variable's units",
+                "• Use when equal weighting of all errors is desired\n• Use when you want errors to be displayed in the target variable's units",
+                "• Use when you want errors to be displayed as a percentage\n• Use when you want to compare model performance across different units."
+            ],
+            "When to Avoid": [
+                "• Avoid when outliers are not important",
+                "• Avoid when the square root of MSE makes the value harder to interpret",
+                "• Avoid when outliers are important",
+                "• Avoid if target values include zero\n• Avoid if target values include very small values"
+            ]
+        }
+
+        df = pd.DataFrame(data)
+
+        # Convert to Markdown
+        def df_to_markdown(df):
+            header = "| " + " | ".join(df.columns) + " |"
+            separator = "| " + " | ".join(["---"] * len(df.columns)) + " |"
+            rows = [
+                "| " + " | ".join(str(cell).replace("\n", "<br>") for cell in row) + " |"
+                for row in df.to_numpy()
+            ]
+            return "\n".join([header, separator] + rows)
+
+        # Display
+        st.markdown(df_to_markdown(df), unsafe_allow_html=True)
+
 
 #End Model Metrics Tab
 
