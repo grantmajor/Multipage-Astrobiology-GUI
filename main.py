@@ -15,7 +15,7 @@ sup_page = st.Page('pages/sup_learn.py', title ='Supervised Learning', icon = ":
 defn_page = st.Page('pages/defn_uses.py', title = 'Definitions and Use Cases', icon = ":material/dictionary:")
 
 
-pg = st.navigation({'General': [about_page, data_page, defn_page],
+pg = st.navigation({'General': [about_page, defn_page, data_page],
                     'Models': [sup_page, unsup_page]})
 
 pg.run()
