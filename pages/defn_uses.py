@@ -52,6 +52,21 @@ with general_terms_tab:
 #Begin Preprocessing Tab
 with preprocessing_tab:
 
+
+    st.subheader("Encoding")
+    
+    with st.expander("Why Encode?"):
+        st.markdown("Placeholder")
+
+    with st.expander("What is One-Hot Encoding?"):
+        st.markdown("Placeholder")
+
+    with st.expander("What is Ordinal Encoding?"):
+        st.markdown("Placeholder")
+
+    with st.expander("What is Target Encoding?"):
+        st.markdown("Placeholder")
+
     st.subheader("Feature Scaling")
     with st.expander("What is Normalization?"):
         st.markdown("Normalization, or Min-Max Scaling, is a form of feature scaling that maps data to the "
