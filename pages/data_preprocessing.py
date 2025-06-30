@@ -75,6 +75,7 @@ if data is not None:
 
     if target in X:
         st.warning("Overlapping target and explanatory variables detected.")
+        st.stop()
 
     # Begin Train Test Split Code
     train_proportion = st.number_input('Enter the Proportion of Data to be Allocated to Training.',
@@ -86,6 +87,8 @@ if data is not None:
 
 
     st.session_state.update({
+        'X_train' : X_train,
+        'X_test' : X_test,
         'y_train' : y_train,
         'y_test' : y_test
     })
@@ -99,95 +102,118 @@ if data is not None:
 
     encoding_selection = st.selectbox("Select Encoding Technique for Categorical Variables",
                  placeholder = "Choose Option",
-                 options = ['One-Hot', 'Ordinal', 'Label', 'Target (Supervised Only)'])
+                 options = ['None', 'One-Hot', 'Ordinal', 'Target (Supervised Only)'],
+                 index = 0)
+
+    st.session_state['encoder_on'] = False
+    st.session_state['scaler_on'] = False
 
     # TODO: Encoder parameters
     # TODO: This code can be optimized
 
     #One Hot Encoding
-    if encoding_selection == 'One-Hot':
-        encoder = OneHotEncoder(sparse_output= False)
 
-        encoder.fit(X_train[categorical_elements])
+    #checks if categorical elements have been selected in selectbox
+    if categorical_elements:
 
-        #Encode training data
-        X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
-                                           columns=encoder.get_feature_names_out(categorical_elements),
-                                           index=X_train.index
-                                           )
+        if encoding_selection == 'One-Hot':
+            encoder = OneHotEncoder(sparse_output= False, handle_unknown='ignore')
 
-        #Encoding testing data with the encoder fit on the training data
-        X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
-                                          columns=encoder.get_feature_names_out(categorical_elements),
-                                          index=X_test.index
-                                          )
+            #fits encoder to training data
+            encoder.fit(X_train[categorical_elements])
 
-    #Ordinal Encoding
-    elif encoding_selection == 'Ordinal':
-        encoder = OrdinalEncoder()
+            #Encode training data
+            X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
+                                               columns=encoder.get_feature_names_out(categorical_elements),
+                                               index=X_train.index
+                                               )
 
-        encoder.fit(X_train[categorical_elements])
+            #Encoding testing data with the encoder fit on the training data
+            X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
+                                              columns=encoder.get_feature_names_out(categorical_elements),
+                                              index=X_test.index
+                                              )
+            st.session_state['encoder_on'] = True
 
-        #Encode training data
-        X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
-                                           columns=categorical_elements,
-                                           index=X_train.index
-                                           )
+            #Ordinal Encoding
+        elif encoding_selection == 'Ordinal':
+            encoder = OrdinalEncoder()
 
-        #Encoding testing data with the encoder fit on the training data
-        X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
-                                          columns=categorical_elements,
-                                          index=X_test.index
-                                          )
+            encoder.fit(X_train[categorical_elements])
 
-        encoder.fit(X_train[categorical_elements])
+            #Encode training data
+            X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
+                                               columns=categorical_elements,
+                                               index=X_train.index
+                                               )
 
-    #Target Encoding
-    elif encoding_selection == 'Target (Supervised Only)':
-        encoder = TargetEncoder()
-        encoder.fit(X_train[categorical_elements], y_train)
+            #Encoding testing data with the encoder fit on the training data
+            try:
+                X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
+                                                columns=categorical_elements,
+                                                index=X_test.index
+                                                )
+            except ValueError as e:
+                st.error(f"Ordinal Encoding failed. There are likely categories in the testing set that were not seen in the "
+                         f"training set.")
+                st.stop()
 
-        # Encode training data
-        X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
-                                           columns=categorical_elements,
-                                           index=X_train.index
-                                           )
+            encoder.fit(X_train[categorical_elements])
+            st.session_state['encoder_on'] = True
 
-        # Encoding testing data with the encoder fit on the training data
-        X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
-                                          columns=categorical_elements,
-                                          index=X_test.index
-                                          )
+        #Target Encoding
+        #TODO: Make it so that column names are retained after encoding
+        elif encoding_selection == 'Target (Supervised Only)':
+            encoder = TargetEncoder()
 
-    #Label Encoding
+            encoder.fit(X_train[categorical_elements], y_train)
+
+            # Encode training data
+            X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
+                                               index=X_train.index
+                                               )
+
+            # Encoding testing data with the encoder fit on the training data
+            X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
+                                              index=X_test.index
+                                              )
+            st.session_state['encoder_on'] = True
+
+            X_train_encoded_cat.columns = X_train_encoded_cat.columns.astype(str)
+            X_test_encoded_cat.columns = X_test_encoded_cat.columns.astype(str)
+
+
+
+        else:
+            st.session_state['encoder_on'] = False
+
+
+        # Checks that an encoder has been selected
+        if st.session_state['encoder_on']:
+
+            #Combine the encoded categorical variables with the numerical elements
+            X_train_encoded = pd.concat([X_train[numerical_elements], X_train_encoded_cat], axis=1)
+            X_test_encoded = pd.concat([X_test[numerical_elements], X_test_encoded_cat], axis=1)
+
+            if st.checkbox('Preview Encoded Data'):
+                st.dataframe(X_train_encoded.head())
+
+
+            st.session_state.update({
+                'X_train_encoded' : X_train_encoded,
+                'X_test_encoded' : X_test_encoded
+            })
+
+        else:
+            st.info("An encoder has not been selected.")
+
     else:
-        X_train_encoded_cat = pd.DataFrame(index = X_train.index)
-        X_test_encoded_cat = pd.DataFrame(index = X_test.index)
-
-        for col in categorical_elements:
-                encoder = LabelEncoder()
-                encoder.fit(X_train[col])
-                X_train_encoded_cat[col] = encoder.transform(X_train[col])
-                X_test_encoded_cat[col] = encoder.transform(X_test[col])
-
-
-    #Combine the encoded categorical variables with the numerical elements
-    X_train_encoded = pd.concat([X_train[numerical_elements], X_train_encoded_cat], axis=1)
-    X_test_encoded = pd.concat([X_test[numerical_elements], X_test_encoded_cat], axis=1)
-
-    if st.checkbox('Preview Encoded Data'):
-        st.dataframe(X_train_encoded.head())
-
-
-    st.session_state.update({
-        'X_train_encoded' : X_train_encoded,
-        'X_test_encoded' : X_test_encoded
-    })
-
+        st.warning("Encoding can only be used when categorical variables are selected.")
     #End Encoding Code
 
     #Feature Scaling
     st.subheader('Feature Scaling')
+
 
     scaler = st.selectbox('Choose a feature scaler', options = ['Min-Max Scaling', 'Standardization'])
     if scaler == 'Min-Max Scaling':
@@ -234,7 +260,7 @@ if data is not None:
         'X_test_scaled' : X_test_scaled
     })
 
-    #End Scaling Code
+#End Scaling Code
 
 #End Preprocessing Code
 
