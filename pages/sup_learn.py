@@ -42,11 +42,12 @@ if 'data_file_data' in st.session_state:
             st.divider()
 
             data_form = st.radio(label = 'Select Form of Data',
-                                 options = ['Raw', 'Encoded', 'Scaled & Encoded'],
-                                 horizontal = False,
-                                 captions = ['Raw data from the uploaded dataset',
-                                             'Encoded data from preprocessing tab',
-                                             'Encoded and scaled data from preprocessing tab'])
+                                 options = ['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
+                                 horizontal = True,
+                                 captions = ['Raw data',
+                                             'Encoded data ',
+                                             'Scaled data',
+                                             'Encoded and scaled data'])
 
             y_train = st.session_state['y_train']
             y_test = st.session_state['y_test']
@@ -62,12 +63,24 @@ if 'data_file_data' in st.session_state:
 
 
             elif data_form == 'Encoded':
-                X_train = st.session_state['X_train_encoded']
-                X_test = st.session_state['X_test_encoded']
+                if st.session_state['encoder_on']:
+                    X_train = st.session_state['X_train_encoded']
+                    X_test = st.session_state['X_test_encoded']
+                else:
+                    st.warning("No encoder was selected in the preprocessing tab, proceededing with raw data")
+                    X_train = st.session_state['X_train']
+                    X_test = st.session_state['X_test']
 
-            else:
+                    X_train = X_train.select_dtypes(include='number')
+                    X_test = X_test.select_dtypes(include='number')
+
+            elif data_form == 'Scaled':
                 X_train = st.session_state['X_train_scaled']
                 X_test = st.session_state['X_test_scaled']
+
+            else:
+                X_train = st.session_state['X_train_encode_scaled']
+                X_test = st.session_state['X_test_encode_scaled']
 
 
             #Begin Regression Code -----------------------------------------------------------------------------------------

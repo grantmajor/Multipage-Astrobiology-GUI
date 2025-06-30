@@ -221,44 +221,77 @@ if data is not None:
     elif scaler == 'Standardization':
         scaler = StandardScaler()
 
-    scaler.fit(X_train_encoded)
 
-    X_train_scaled = pd.DataFrame(scaler.transform(X_train_encoded),
-                                  columns = X_train_encoded.columns,
-                                  index = X_train_encoded.index)
+    if st.session_state['encoder_on']:
+        scaler.fit(X_train_encoded)
 
-    X_test_scaled = pd.DataFrame(scaler.transform(X_test_encoded),
-                                 columns = X_test_encoded.columns,
-                                 index = X_test_encoded.index)
+        X_train_encode_scaled = pd.DataFrame(scaler.transform(X_train_encoded),
+                                      columns = X_train_encoded.columns,
+                                      index = X_train_encoded.index)
 
+        X_test_encode_scaled = pd.DataFrame(scaler.transform(X_test_encoded),
+                                     columns = X_test_encoded.columns,
+                                     index = X_test_encoded.index)
+
+        st.session_state.update({
+        'X_test_encode_scaled': X_test_encode_scaled,
+        'X_train_encode_scaled': X_train_encode_scaled
+        })
+
+    else:
+        scaler.fit(X_train[numerical_elements])
+
+        X_train_scaled =  pd.DataFrame(scaler.transform(X_train[numerical_elements]),
+                                     columns = X_train[numerical_elements].columns,
+                                     index = X_train[numerical_elements].index)
+
+        X_test_scaled =  pd.DataFrame(scaler.transform(X_test[numerical_elements]),
+                                     columns = X_test[numerical_elements].columns,
+                                     index = X_test[numerical_elements].index)
+
+        st.session_state.update({
+            'X_train_scaled': X_train_scaled,
+            'X_test_scaled': X_test_scaled
+        })
 
     view_data = st.radio('**Preview Data**',
-                         ['Scaled Data', 'Unscaled Data', 'Compare'],
-                         captions = [
-                             'Show preview of scaled dataframe',
-                             'Show preview of unscaled data frame',
-                             'Preview both dataframes side-by-side'],
-                         horizontal = True
-                         )
+                 ['Scaled Data', 'Unscaled Data', 'Compare'],
+                 captions = [
+                     'Show preview of scaled dataframe',
+                     'Show preview of unscaled data frame',
+                     'Preview both dataframes side-by-side'],
+                 horizontal = True
+                 )
 
-    if view_data == 'Scaled Data':
-        st.dataframe(X_train_scaled.head())
-    elif view_data == 'Unscaled Data':
-        st.dataframe(X_train_encoded.head())
+    if st.session_state['encoder_on']:
+        if view_data == 'Scaled Data':
+            st.dataframe(X_train_encode_scaled.head())
+        elif view_data == 'Unscaled Data':
+            st.dataframe(X_train_encode_scaled.head())
+        else:
+            scale_col, unscale_col = columns(2, border = True)
+            with scale_col:
+                st.markdown("**Scaled Data**")
+                st.dataframe(X_train_encode_scaled.head())
+            with unscale_col:
+                st.markdown("**Unscaled Data**")
+                st.dataframe(X_train[numerical_elements].head())
     else:
-        scale_col, unscale_col = columns(2, border = True)
-        with scale_col:
-            st.markdown("**Scaled Data**")
+        if view_data == 'Scaled Data':
             st.dataframe(X_train_scaled.head())
-        with unscale_col:
-            st.markdown("**Unscaled Data**")
-            st.dataframe(X_train_encoded.head())
+        elif view_data == 'Unscaled Data':
+            st.dataframe(X_train_scaled.head())
+        else:
+            scale_col, unscale_col = columns(2, border = True)
+            with scale_col:
+                st.markdown("**Scaled Data**")
+                st.dataframe(X_train_scaled.head())
+            with unscale_col:
+                st.markdown("**Unscaled Data**")
+                st.dataframe(X_train[numerical_elements].head())
 
 
-    st.session_state.update({
-        'X_train_scaled' : X_train_scaled,
-        'X_test_scaled' : X_test_scaled
-    })
+
 
 #End Scaling Code
 
