@@ -83,6 +83,12 @@ if data is not None:
         st.warning("Overlapping target and explanatory variables detected.")
         st.stop()
 
+
+    st.session_state.update({
+        'X_raw' : X,
+        'y_raw' : y
+    })
+
     # Begin Train Test Split Code
     train_proportion = st.number_input('Enter the Proportion of Data to be Allocated to Training.',
                                        min_value=0.0,
