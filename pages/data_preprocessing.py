@@ -1,3 +1,5 @@
+import numbers
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -72,10 +74,20 @@ if data is not None:
     if target is not None:
         X = X[elements]
         y = y[target]
+        if isinstance(y[1], numbers.Number):
+            st.session_state['target_is_number'] = True
+        else:
+            st.session_state['target_is_number'] = False
 
     if target in X:
         st.warning("Overlapping target and explanatory variables detected.")
         st.stop()
+
+
+    st.session_state.update({
+        'X_raw' : X,
+        'y_raw' : y
+    })
 
     # Begin Train Test Split Code
     train_proportion = st.number_input('Enter the Proportion of Data to be Allocated to Training.',
@@ -93,7 +105,6 @@ if data is not None:
         'y_test' : y_test
     })
 
-
     # End Train Test Split Code
 
     #Begin  Encoding Code
@@ -109,12 +120,28 @@ if data is not None:
     st.session_state['scaler_on'] = False
 
     # TODO: Encoder parameters
-    # TODO: This code can be optimized
 
     #One Hot Encoding
 
     #checks if categorical elements have been selected in selectbox
     if categorical_elements:
+
+        def encode_data(encoder, data, elements, columns=False):
+            """ Takes data parameter and encodes the specified elements. Assumes encoder has been fit
+
+            :param encoder: A pre-fit encoder to be used to transform data
+            :param data: Array-like form of data to be transformed using the encoder
+            :param elements: Array-like form of feature names, used to select the columns for encoding
+            :param columns: Boolean check to determine if column names should be used
+            :return: A dataframe with the newly encoded data.
+            """
+            if not columns:
+                return pd.DataFrame(encoder.transform(data[elements]),
+                                    index=data.index)
+            else:
+                return pd.DataFrame(encoder.transform(data[elements]),
+                                    columns=encoder.get_feature_names_out(elements),
+                                    index=data.index)
 
         if encoding_selection == 'One-Hot':
             encoder = OneHotEncoder(sparse_output= False, handle_unknown='ignore')
@@ -123,16 +150,12 @@ if data is not None:
             encoder.fit(X_train[categorical_elements])
 
             #Encode training data
-            X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
-                                               columns=encoder.get_feature_names_out(categorical_elements),
-                                               index=X_train.index
-                                               )
+            X_train_encoded_cat = encode_data(encoder, X_train, categorical_elements, columns = True)
 
             #Encoding testing data with the encoder fit on the training data
-            X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
-                                              columns=encoder.get_feature_names_out(categorical_elements),
-                                              index=X_test.index
-                                              )
+            X_test_encoded_cat = encode_data(encoder, X_test, categorical_elements, columns = True)
+
+
             st.session_state['encoder_on'] = True
 
             #Ordinal Encoding
@@ -142,17 +165,11 @@ if data is not None:
             encoder.fit(X_train[categorical_elements])
 
             #Encode training data
-            X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
-                                               columns=categorical_elements,
-                                               index=X_train.index
-                                               )
+            X_train_encoded_cat = encode_data(encoder, X_train, categorical_elements, columns = True)
 
             #Encoding testing data with the encoder fit on the training data
             try:
-                X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
-                                                columns=categorical_elements,
-                                                index=X_test.index
-                                                )
+                X_test_encoded_cat = encode_data(encoder, X_test, categorical_elements, columns = True)
             except ValueError as e:
                 st.error(f"Ordinal Encoding failed. There are likely categories in the testing set that were not seen in the "
                          f"training set.")
@@ -165,18 +182,14 @@ if data is not None:
         #TODO: Make it so that column names are retained after encoding
         elif encoding_selection == 'Target (Supervised Only)':
             encoder = TargetEncoder()
-
             encoder.fit(X_train[categorical_elements], y_train)
 
             # Encode training data
-            X_train_encoded_cat = pd.DataFrame(encoder.transform(X_train[categorical_elements]),
-                                               index=X_train.index
-                                               )
+            X_train_encoded_cat = encode_data(encoder, X_train, categorical_elements, columns = False)
 
             # Encoding testing data with the encoder fit on the training data
-            X_test_encoded_cat = pd.DataFrame(encoder.transform(X_test[categorical_elements]),
-                                              index=X_test.index
-                                              )
+            X_test_encoded_cat = encode_data(encoder, X_test, categorical_elements, columns = False)
+
             st.session_state['encoder_on'] = True
 
             X_train_encoded_cat.columns = X_train_encoded_cat.columns.astype(str)
@@ -186,7 +199,6 @@ if data is not None:
 
         else:
             st.session_state['encoder_on'] = False
-
 
         # Checks that an encoder has been selected
         if st.session_state['encoder_on']:
@@ -222,16 +234,25 @@ if data is not None:
         scaler = StandardScaler()
 
 
+    def scale_data(scaler, data):
+        """ Applies the specified, pre-fit scaler to the data
+
+
+        :param scaler: A pre-fitted scaler to be applied to the data
+        :param data: Array-like form of data, will be scaled
+        :return: A dataframe containing a scaled version of the 'data' parameter
+        """
+        return pd.DataFrame(scaler.transform(data),
+                            columns = data.columns,
+                            index = data.index)
+
+
     if st.session_state['encoder_on']:
         scaler.fit(X_train_encoded)
 
-        X_train_encode_scaled = pd.DataFrame(scaler.transform(X_train_encoded),
-                                      columns = X_train_encoded.columns,
-                                      index = X_train_encoded.index)
+        X_train_encode_scaled = scale_data(scaler, X_train_encoded)
 
-        X_test_encode_scaled = pd.DataFrame(scaler.transform(X_test_encoded),
-                                     columns = X_test_encoded.columns,
-                                     index = X_test_encoded.index)
+        X_test_encode_scaled = scale_data(scaler, X_test_encoded)
 
         st.session_state.update({
         'X_test_encode_scaled': X_test_encode_scaled,
@@ -241,13 +262,9 @@ if data is not None:
     else:
         scaler.fit(X_train[numerical_elements])
 
-        X_train_scaled =  pd.DataFrame(scaler.transform(X_train[numerical_elements]),
-                                     columns = X_train[numerical_elements].columns,
-                                     index = X_train[numerical_elements].index)
+        X_train_scaled =  scale_data(scaler, X_train[numerical_elements])
 
-        X_test_scaled =  pd.DataFrame(scaler.transform(X_test[numerical_elements]),
-                                     columns = X_test[numerical_elements].columns,
-                                     index = X_test[numerical_elements].index)
+        X_test_scaled =  scale_data(scaler, X_test[numerical_elements])
 
         st.session_state.update({
             'X_train_scaled': X_train_scaled,
@@ -289,8 +306,6 @@ if data is not None:
             with unscale_col:
                 st.markdown("**Unscaled Data**")
                 st.dataframe(X_train[numerical_elements].head())
-
-
 
 
 #End Scaling Code

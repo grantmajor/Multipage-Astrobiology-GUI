@@ -67,7 +67,7 @@ if 'data_file_data' in st.session_state:
                     X_train = st.session_state['X_train_encoded']
                     X_test = st.session_state['X_test_encoded']
                 else:
-                    st.warning("No encoder was selected in the preprocessing tab, proceededing with raw data")
+                    st.warning("No encoder was selected in the preprocessing tab, proceeding with raw data")
                     X_train = st.session_state['X_train']
                     X_test = st.session_state['X_test']
 
@@ -79,12 +79,21 @@ if 'data_file_data' in st.session_state:
                 X_test = st.session_state['X_test_scaled']
 
             else:
-                X_train = st.session_state['X_train_encode_scaled']
-                X_test = st.session_state['X_test_encode_scaled']
+                if st.session_state['encoder_on']:
+                    X_train = st.session_state['X_train_encode_scaled']
+                    X_test = st.session_state['X_test_encode_scaled']
+                else:
+                    st.warning("No encoder was selected in the preprocessing tab, proceeding with scaled data")
+                    X_train = st.session_state['X_train_scaled']
+                    X_test = st.session_state['X_test_scaled']
+
 
 
             #Begin Regression Code -----------------------------------------------------------------------------------------
             if options_sup == "Regression":
+                if not st.session_state['target_is_number']:
+                    st.error("Target variable is not a number. Regression cannot be used.")
+                    st.stop()
                 # set to 0 to prevent errors when non quantile loss function is chosen
                 quantile_value = 0
                 selected_model = st.selectbox(label='Chose Regression Algorithm',
