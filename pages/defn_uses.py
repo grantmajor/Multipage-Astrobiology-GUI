@@ -53,11 +53,21 @@ with general_terms_tab:
 with preprocessing_tab:
 
     st.subheader("Feature Scaling")
-    with st.expander("What is Min-max Scaling"):
-        st.markdown("Placeholder")
+    with st.expander("What is Normalization?"):
+        st.markdown("Normalization, or Min-Max Scaling, is a form of feature scaling that maps data to the "
+                    "range [0, 1].  \n\n")
+                    #TODO: Finish when to normalize section
+                    # "**When to Normalize**:  \n"
+                    # "Data should be normalized when the distribution of the data is unknown or does not follow a Gaussian distribution. "
+                    # "Normalization is highly sensitive to outliers since the range of values is confined to [0,1]")
 
-    with st.expander("What is Standardization"):
-        st.markdown("Placeholder")
+    with st.expander("What is Standardization?"):
+        st.markdown("Standardization is a feature scaling technique that scales the data such that the mean "
+                    "of the features is 0 and the standard deviation is 1. This makes the data have similar properties to "
+                    "a Gaussian distribution, however, this does not make the data have the shape of a Gaussian distribution.  \n\n")
+                    #TODO: finish when to standardize section
+                    # "**When to Standardize**:  \n")
+
 
 
 #Begin Models Tab
@@ -125,7 +135,7 @@ with models_tab:
 with model_metrics_tab:
     #TODO: Come up with a persistent example for each definition like how each metric applies to a email spam model
     #TODO: Explain nuance of unbalanced datasets, or models in which FN or FP is more important than the other
-    # Google ML Concepts is a great place to look
+    
     st.subheader('Classification Metrics')
 
     #Accuracy

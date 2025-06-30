@@ -34,63 +34,57 @@ if 'data_file_data' in st.session_state:
     with model_tab:
         col1, col2 = st.columns(spec=2, gap='small', vertical_alignment='top')
         with col1:
-            # Remove Columns that are Strings
-            X_sup = data.select_dtypes(include=['int64', 'float64'])
-
-            st.subheader('Data and Hyperparameter Selection')
-
-            X_sup = X_sup.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
-            X_sup = X_sup.dropna()
 
             options_sup = st.selectbox(label='Select Prediction Type',
                                        options=['Classification',
                                                 'Regression'])
 
-            elements_sup = st.multiselect("Select Explanatory Variables (default is all numerical columns):",
-                                          X_sup.columns,
-                                          placeholder='Choose Option',
-                                          default=X_sup.columns,
-                                          )
-            y_sup = data
-            y_sup = y_sup.dropna()
-
-
-            # TODO: Make it so that the last column is the target variable automatically
-            target_sup = st.selectbox('Choose Target',
-                                      options=y_sup.columns,
-                                      placeholder='Choose Option'
-                                      )
-
-
-            X_sup = X_sup[elements_sup]
-            y_sup = y_sup[target_sup]
-
-            if target_sup in X_sup:
-                st.warning("Overlapping target and explanatory variables detected.")
-
-            # Begin Train Test Split Code ----------------------------------------------------------------------------------
-            train_proportion = st.number_input('Enter the Proportion of Data to be Allocated to Training.',
-                                                   min_value=0.0,
-                                                   value=0.75,
-                                                   step=0.01,
-                                                   format="%.2f",)
-            X_train, X_test, y_train, y_test = train_test_split(X_sup, y_sup, train_size=train_proportion)
-
-            # End Train Test Split Code ------------------------------------------------------------------------------------
-
             st.divider()
 
-            # Begin Label Encoding Code ------------------------------------------------------------------------------------
+            data_form = st.radio(label = 'Select Form of Data',
+                                 options = ['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
+                                 horizontal = True,
+                                 captions = ['Raw data',
+                                             'Encoded data ',
+                                             'Scaled data',
+                                             'Encoded and scaled data'])
 
-            label_encoder = LabelEncoder()
-            y_train_encoded = label_encoder.fit_transform(y_train)
-            y_test_encoded = label_encoder.fit_transform(y_test)
+            y_train = st.session_state['y_train']
+            y_test = st.session_state['y_test']
 
-            # End Label Encoding Code --------------------------------------------------------------------------------------
+            if data_form == 'Raw':
+                X_train = st.session_state['X_train']
+                X_test = st.session_state['X_test']
+
+                X_train = X_train.select_dtypes(include = 'number')
+                X_test = X_test.select_dtypes(include = 'number')
+
+                st.warning("Non-numerical features will be dropped when handling raw data")
+
+
+            elif data_form == 'Encoded':
+                if st.session_state['encoder_on']:
+                    X_train = st.session_state['X_train_encoded']
+                    X_test = st.session_state['X_test_encoded']
+                else:
+                    st.warning("No encoder was selected in the preprocessing tab, proceededing with raw data")
+                    X_train = st.session_state['X_train']
+                    X_test = st.session_state['X_test']
+
+                    X_train = X_train.select_dtypes(include='number')
+                    X_test = X_test.select_dtypes(include='number')
+
+            elif data_form == 'Scaled':
+                X_train = st.session_state['X_train_scaled']
+                X_test = st.session_state['X_test_scaled']
+
+            else:
+                X_train = st.session_state['X_train_encode_scaled']
+                X_test = st.session_state['X_test_encode_scaled']
 
 
             #Begin Regression Code -----------------------------------------------------------------------------------------
-            if options_sup == "Regression" and not X_sup.empty:
+            if options_sup == "Regression":
                 # set to 0 to prevent errors when non quantile loss function is chosen
                 quantile_value = 0
                 selected_model = st.selectbox(label='Chose Regression Algorithm',
@@ -209,7 +203,7 @@ if 'data_file_data' in st.session_state:
             # End Regression Code ------------------------------------------------------------------------------------------
 
             # Begin Classification Code ------------------------------------------------------------------------------------
-            elif options_sup == 'Classification' and not X_sup.empty:
+            elif options_sup == 'Classification':
                 selected_model = st.selectbox(label='Choose Classification Algorithm',
                                               options=['Support Vector Machine (SVM)',
                                                        'k-Nearest Neighbors (k-NN)',
@@ -309,19 +303,18 @@ if 'data_file_data' in st.session_state:
 
             # End Classification Code --------------------------------------------------------------------------------------
 
-            if not X_sup.empty and not y_sup.empty:
                 st.session_state['unfitted_model'] = selected_model
-                selected_model.fit(X_train, y_train_encoded)
+                selected_model.fit(X_train, y_train)
 
             # End Model Training Code ------------------------------------------------------------------------------------------
 
             # Begin Model Metrics Code -----------------------------------------------------------------------------------------
             with col2:
                 st.subheader("Model Performance Metrics")
-                if not X_sup.empty:
-                    y_pred_encoded = selected_model.predict(X_test)
-                else:
-                    st.warning("Select explanatory variables to continue.")
+                try:
+                    y_pred = selected_model.predict(X_test)
+                except NotFittedError:
+                    selected_model.fit(X_train, y_train)
 
                 # Begin Cross Validation Code --------------------------------------------------------------------------
                 with st.expander('Cross Validation'):
@@ -359,7 +352,7 @@ if 'data_file_data' in st.session_state:
 
 
                     # Begin Classification Report Code--------------------------------------------------------------------------
-                    class_report = classification_report(y_test_encoded, y_pred_encoded, output_dict = True)
+                    class_report = classification_report(y_test, y_pred, output_dict = True)
                     with st.expander('Classification Report'):
                         class_report = pd.DataFrame(class_report).transpose()
                         st.table(class_report)
@@ -368,10 +361,9 @@ if 'data_file_data' in st.session_state:
 
                     #Begin Confusion Matrix Code ----------------- -------------------------------------------------------------
                     with st.expander('Confusion Matrix'):
-                        conf_mat = confusion_matrix(y_test_encoded, y_pred_encoded)
+                        conf_mat = confusion_matrix(y_test, y_pred)
 
                         # Define custom labels
-                        class_names = label_encoder.classes_
                         annot_labels = np.array([[str(cell) for cell in row] for row in conf_mat])
 
                         # Reset any existing figures
@@ -388,8 +380,6 @@ if 'data_file_data' in st.session_state:
                                     fmt='',
                                     cmap='Blues',
                                     cbar=True,
-                                    xticklabels=class_names,
-                                    yticklabels=class_names,
                                     linewidths=0.5,
                                     linecolor='#0e1117',
                                     ax=ax)
@@ -413,7 +403,7 @@ if 'data_file_data' in st.session_state:
                 # End Classification Metrics Code ------------------------------------------------------------------------------
 
                 # Begin Regression Metrics Code --------------------------------------------------------------------------------
-                elif options_sup == 'Regression' and not X_sup.empty:
+                elif options_sup == 'Regression':
                     try:
                         check_is_fitted(selected_model)
                     except NotFittedError as e:
@@ -427,43 +417,21 @@ if 'data_file_data' in st.session_state:
                     MAE = mean_absolute_error(y_test, y_pred)
                     MAPE = mean_absolute_percentage_error(y_test, y_pred)
 
-                    reg_metrics = pd.DataFrame([{'Mean Squared Error': MSE,
-                                                      'Root Mean Squared Error': RMSE,
-                                                      'Mean Absolute Error': MAE,
-                                                      'Mean Absolute Percentage Error': MAPE}])
+                    with st.expander('Loss Functions'):
+                        reg_metrics = pd.DataFrame([{
+                            'Mean Squared Error': MSE,
+                            'Root Mean Squared Error': RMSE,
+                            'Mean Absolute Error': MAE,
+                            'Mean Absolute Percentage Error': MAPE
+                        }])
 
-                    st.dataframe(reg_metrics, hide_index=True)
+
+                        reg_metrics = reg_metrics.transpose().reset_index()
+                        reg_metrics.columns = ['Loss Function', 'Value']
+
+                        st.dataframe(reg_metrics, hide_index=True)
 
                     # End Regression Loss Function Code ------------------------------------------------------------------------
-
-                    # Begin Actual v Predicted Graph Code ---------------------------------------------------------------------
-                    #TODO: Figure out if worth keeping. Extremely computationally expensive for large datasets
-                    #fig, ax = plt.subplots()
-                    #fig.set_facecolor('#0e1117')
-                    #ax.set_facecolor('#0e1117')
-
-                    # Scatter and reference line
-                    #ax.scatter(y_test, y_pred, color='deepskyblue', edgecolor='white', s=60, alpha=0.8)
-                    #ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()],
-                    #        'r--', lw=2, label='Perfect Prediction')
-
-                    # Add legend and set text color manually
-                    #legend = ax.legend(facecolor='#0e1117', frameon=False)
-                    #for text in legend.get_texts():
-                    #    text.set_color('white')
-
-                    # Styling
-                    #ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.3)
-                    #ax.spines['top'].set_visible(False)
-                    #ax.spines['right'].set_visible(False)
-                    #ax.tick_params(colors='white', labelsize=10)
-                    #ax.set_title('Actual vs. Predicted', color='white')
-                    #ax.set_xlabel('Actual', color='white')
-                    #ax.set_ylabel('Predicted', color='white')
-
-                    #st.pyplot(fig)
-
-                    # End Actual v Predicted Graph Code ------------------------------------------------------------------------
 
                 #End Regression Metrics Code -----------------------------------------------------------------------------------
 
