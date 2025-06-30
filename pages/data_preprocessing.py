@@ -1,3 +1,5 @@
+import numbers
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -72,6 +74,10 @@ if data is not None:
     if target is not None:
         X = X[elements]
         y = y[target]
+        if isinstance(y[1], numbers.Number):
+            st.session_state['target_is_number'] = True
+        else:
+            st.session_state['target_is_number'] = False
 
     if target in X:
         st.warning("Overlapping target and explanatory variables detected.")
@@ -250,9 +256,9 @@ if data is not None:
     else:
         scaler.fit(X_train[numerical_elements])
 
-        X_train_scaled =  scale_data(scaler, X_train)
+        X_train_scaled =  scale_data(scaler, X_train[numerical_elements])
 
-        X_test_scaled =  scale_data(scaler, X_test)
+        X_test_scaled =  scale_data(scaler, X_test[numerical_elements])
 
         st.session_state.update({
             'X_train_scaled': X_train_scaled,

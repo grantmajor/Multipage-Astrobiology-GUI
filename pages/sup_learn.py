@@ -85,6 +85,9 @@ if 'data_file_data' in st.session_state:
 
             #Begin Regression Code -----------------------------------------------------------------------------------------
             if options_sup == "Regression":
+                if not st.session_state['target_is_number']:
+                    st.error("Target variable is not a number. Regression cannot be used.")
+                    st.stop()
                 # set to 0 to prevent errors when non quantile loss function is chosen
                 quantile_value = 0
                 selected_model = st.selectbox(label='Chose Regression Algorithm',
