@@ -29,24 +29,47 @@ if 'data_file_data' in st.session_state:
         st.divider()
 
         # Remove Columns that are Strings
-        X = data.select_dtypes(include=['int64', 'float64'])
+        data_form = st.radio(label='Select Form of Data',
+                             options=['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
+                             horizontal=True,
+                             captions=['Raw data',
+                                       'Encoded data ',
+                                       'Scaled data',
+                                       'Encoded and scaled data'])
 
-        st.subheader('Data and Hyperparameter Selection')
+        y_train = st.session_state['y_train']
+        y_test = st.session_state['y_test']
 
-        X = X.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
-        X = X.dropna()
+        if data_form == 'Raw':
+            X_train = st.session_state['X_train']
+            X_test = st.session_state['X_test']
 
-        elements = st.multiselect("Select Explanatory Variables (default is all numerical columns):",
-                                  X.columns,
-                                  default=X.columns
-                                  )
+            X_train = X_train.select_dtypes(include='number')
+            X_test = X_test.select_dtypes(include='number')
 
-        y = data
-        y = y.dropna()
+            st.warning("Non-numerical features will be dropped when handling raw data")
 
-        target = st.selectbox('Choose Target',
-                              options=y.columns,
-                              )
+
+        elif data_form == 'Encoded':
+            if st.session_state['encoder_on']:
+                X_train = st.session_state['X_train_encoded']
+                X_test = st.session_state['X_test_encoded']
+            else:
+                st.warning("No encoder was selected in the preprocessing tab, proceededing with raw data")
+                X_train = st.session_state['X_train']
+                X_test = st.session_state['X_test']
+
+                X_train = X_train.select_dtypes(include='number')
+                X_test = X_test.select_dtypes(include='number')
+
+        elif data_form == 'Scaled':
+            X_train = st.session_state['X_train_scaled']
+            X_test = st.session_state['X_test_scaled']
+
+        else:
+            X_train = st.session_state['X_train_encode_scaled']
+            X_test = st.session_state['X_test_encode_scaled']
+
 
         options = st.selectbox(label='Select Dimensionality Reduction Method',
                                options=['Standard PCA',
@@ -57,11 +80,12 @@ if 'data_file_data' in st.session_state:
         # Set random state of the subsequent scripts
         np.random.seed(42)
 
+        X = st.session_state['X_raw']
+        y = st.session_state['y_raw']
+
+
         if options == 't-SNE':
             st.subheader('Define t-SNE Parameters')
-
-            X = X[elements]  # Make prediction based on selected elements
-            y = y[target]
 
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
@@ -141,8 +165,7 @@ if 'data_file_data' in st.session_state:
 
         else:
             st.subheader('Define Standard PCA Parameters')
-            X = X[elements]  # Make prediction based on selected elements
-            y = y[target]
+
 
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
