@@ -7,7 +7,6 @@
     <list default="true" id="dddf0978-5059-481d-b500-f9f584531bb1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/data_preprocessing.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/data_preprocessing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/sup_learn.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/sup_learn.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,7 +53,7 @@
     &quot;Python.main.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;Data-Supervised-Swap&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;
   }
 }</component>

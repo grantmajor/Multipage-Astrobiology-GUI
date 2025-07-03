@@ -267,7 +267,7 @@ if data is not None:
         if view_data == 'Scaled Data':
             st.dataframe(X_train_encode_scaled.head())
         elif view_data == 'Unscaled Data':
-            st.dataframe(X_train_encode_scaled.head())
+            st.dataframe(X_train_encoded.head())
         else:
             scale_col, unscale_col = columns(2, border = True)
             with scale_col:
@@ -275,12 +275,14 @@ if data is not None:
                 st.dataframe(X_train_encode_scaled.head())
             with unscale_col:
                 st.markdown("**Unscaled Data**")
-                st.dataframe(X_train[numerical_elements].head())
+                st.dataframe(X_train_encoded.head())
+
+
     else:
         if view_data == 'Scaled Data':
             st.dataframe(X_train_scaled.head())
         elif view_data == 'Unscaled Data':
-            st.dataframe(X_train_scaled.head())
+            st.dataframe(X_train[numerical_elements].head())
         else:
             scale_col, unscale_col = columns(2, border = True)
             with scale_col:
