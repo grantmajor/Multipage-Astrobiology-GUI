@@ -90,124 +90,129 @@ if 'data_file_data' in st.session_state:
 
 
             #Begin Regression Code -----------------------------------------------------------------------------------------
+
+                # Begin HistGradBoost --------------------------------------------------------------------------------------
+
+            def get_hgbrt_model():
+
+                loss_map = { 'Squared Error' : 'squared_error',
+                             'Absolute Error' : 'absolute_error',
+                             'Poisson' : 'poisson',
+                             'Quantile' : 'quantile'}
+
+                if np.all(y_train > 0):
+                    loss_map['Gamma'] = 'gamma'
+
+
+                loss_choice = st.selectbox(label='Choose Loss Function',
+                                             options=loss_map.keys(),
+                                             index=0)
+
+
+
+                loss_selection = loss_map[loss_choice]
+
+                if loss_selection == 'quantile':
+                    quantile_value = st.number_input(label='Enter Quantile Value',
+                                                     min_value=0.01,
+                                                     max_value=1.0,
+                                                     step=0.01,
+                                                     format='%.2f')
+
+                else:
+                    quantile_value = None
+
+                learn_rate = st.number_input(label='Enter Learning Rate',
+                                             min_value=0.0,
+                                             max_value=1.0,
+                                             step=0.01,
+                                             value=0.1,
+                                             format=
+                                             '%.2f')
+
+                max_num_iter = st.number_input(label='Enter Maximum Number of Iterations',
+                                               min_value=1,
+                                               step=1,
+                                               value=100)
+
+                max_leaf = st.number_input(label='Enter Maximum Number of Leaves for Each Tree',
+                                           min_value=2,
+                                           value=31,
+                                           step=1)
+
+                return HistGradientBoostingRegressor(loss=loss_selection,
+                                                     quantile=quantile_value,
+                                                     learning_rate=learn_rate,
+                                                     max_iter=max_num_iter,
+                                                     max_leaf_nodes=max_leaf
+                                                     )
+
+            # End HistGradBoost Code -----------------------------------------------------------------------------------
+
+            # Begin Random Forest Regressor Code -- --------------------------------------------------------------------
+            def get_random_forest_reg_model():
+                num_estimators = st.number_input(label='Enter the number of estimators.',
+                                                 min_value=1,
+                                                 step=1,
+                                                 value=100)
+
+                criterion_choice = st.selectbox(label='Select a criterion',
+                                                  options=['Squared Error', 'Absolute Error', 'Friedman MSE',
+                                                           'Poisson'])
+                criterion_map = {'Squared Error' : 'squared_error',
+                                 'Absolute Error' : 'absoute_error',
+                                 'Friedman MSE' : 'friedman_mse',
+                                 'Poisson' : 'poisson'}
+
+                criterion_selection = criterion_map[criterion_choice]
+
+                num_min_samples_split = st.number_input(
+                    "Enter the minimum number of samples required to split an internal node",
+                    min_value=2,
+                    step=1,
+                    value=2)
+
+                enable_tree_depth = st.checkbox('Enable tree depth parameter',
+                                                value=False)
+
+                if enable_tree_depth:
+                    tree_depth = st.number_input('Enter the maximum depth of each tree.',
+                                                 min_value=1,
+                                                 step=1)
+                else:
+                    tree_depth = None
+
+                return RandomForestRegressor(n_estimators=num_estimators,
+                                             criterion=criterion_selection,
+                                             max_depth=tree_depth,
+                                             min_samples_split=num_min_samples_split
+                                             )
+
+            # End Random Forest Regressor Code  ------------------------------------------------------------------------
+
+            # Begin Ridge Code -----------------------------------------------------------------------------------------
+            def get_ridge_model():
+                alpha_value = st.number_input(label='Input Alpha Value',
+                                              min_value=0.0,
+                                              value=1.0,
+                                              step=0.01,
+                                              format='%.2f')
+
+                return  Ridge(alpha=alpha_value)
             if options_sup == "Regression":
                 if not st.session_state['target_is_number']:
                     st.error("Target variable is not a number. Regression cannot be used.")
                     st.stop()
-                # set to 0 to prevent errors when non quantile loss function is chosen
-                quantile_value = 0
-                selected_model = st.selectbox(label='Chose Regression Algorithm',
-                                              options=['Histogram-based Gradient Boosting Regressor Tree',
-                                                       'Random Forest Regressor',
-                                                       'Ridge Regressor'])
 
-                # Begin HistGradBoost --------------------------------------------------------------------------------------
-                if selected_model == 'Histogram-based Gradient Boosting Regressor Tree':
-                    loss_function = st.selectbox(label='Choose Loss Function',
-                                                 options=['Squared Error',
-                                                          'Absolute Error',
-                                                          'Gamma',
-                                                          'Poisson',
-                                                          'Quantile'],
-                                                 index=0)
+                model_display_names = { 'Histogram Gradient Boosted Regression Tree' : get_hgbrt_model,
+                                        'Random Forest Regressor' : get_random_forest_reg_model,
+                                        'Ridge Regressor' :get_ridge_model
+                }
 
-                    if loss_function == 'Squared Error':
-                        loss_function = 'squared_error'
-                    elif loss_function == 'Absolute Error':
-                        loss_function = 'absolute_error'
-                    else:
-                        loss_function = loss_function.lower()
+                model_choice = st.selectbox('Choose Regression Algorithm', list(model_display_names.keys()))
+                selected_model = model_display_names[model_choice]()
 
-                    if loss_function == 'quantile':
-                        quantile_value = st.number_input(label='Enter Quantile Value',
-                                                         min_value=0.0,
-                                                         max_value=1.0,
-                                                         step=0.01,
-                                                         format='%.2f')
 
-                    learn_rate = st.number_input(label='Enter Learning Rate',
-                                                 min_value=0.0,
-                                                 max_value=1.0,
-                                                 step=0.01,
-                                                 value=0.1,
-                                                 format=
-                                                 '%.2f')
-
-                    max_num_iter = st.number_input(label='Enter Maximum Number of Iterations',
-                                                   min_value=1,
-                                                   step=1,
-                                                   value=100)
-
-                    max_leaf = st.number_input(label='Enter Maximum Number of Leaves for Each Tree',
-                                               min_value=2,
-                                               value=31,
-                                               step=1)
-
-                    selected_model = HistGradientBoostingRegressor(loss=loss_function,
-                                                                   quantile=quantile_value,
-                                                                   learning_rate=learn_rate,
-                                                                   max_iter=max_num_iter,
-                                                                   max_leaf_nodes=max_leaf
-                                                                   )
-
-                # End HistGradBoost Code -----------------------------------------------------------------------------------
-
-                # Begin Random Forest Regressor Code -- --------------------------------------------------------------------
-                elif selected_model == 'Random Forest Regressor':
-                    num_estimators = st.number_input(label='Enter the number of estimators.',
-                                                     min_value=1,
-                                                     step=1,
-                                                     value=100)
-
-                    selected_criterion = st.selectbox(label='Select a criterion',
-                                                      options=['Squared Error', 'Absolute Error', 'Friedman MSE',
-                                                               'Poisson'])
-
-                    # casts the selected criterion into the correct format for scikit
-                    if selected_criterion == 'Squared Error':
-                        selected_criterion = 'squared_error'
-                    elif selected_criterion == 'Absolute Error':
-                        selected_criterion = 'absolute_error'
-                    elif selected_criterion == 'Friedman MSE':
-                        selected_criterion = 'friedman_mse'
-                    else:
-                        selected_criterion = selected_criterion.lower()
-
-                    num_min_samples_split = st.number_input(
-                        "Enter the minimum number of samples required to split an internal node",
-                        min_value=2,
-                        step=1,
-                        value=2)
-
-                    enable_tree_depth = st.checkbox('Enable tree depth parameter',
-                                                    value=False)
-
-                    if enable_tree_depth:
-                        tree_depth = st.number_input('Enter the maximum depth of each tree.',
-                                                     min_value=1,
-                                                     step=1)
-                        selected_model = RandomForestRegressor(n_estimators=num_estimators,
-                                                               criterion=selected_criterion,
-                                                               max_depth=tree_depth,
-                                                               min_samples_split=num_min_samples_split
-                                                               )
-                    else:
-                        selected_model = RandomForestRegressor(n_estimators=num_estimators,
-                                                               criterion=selected_criterion,
-                                                               min_samples_split=num_min_samples_split
-                                                               )
-
-                # End Random Forest Regressor Code  ------------------------------------------------------------------------
-
-                # Begin Ridge Code -----------------------------------------------------------------------------------------
-                elif selected_model == 'Ridge Regressor':
-                    alpha_value = st.number_input(label='Input Alpha Value',
-                                                  min_value=0.0,
-                                                  value=1.0,
-                                                  step=0.01,
-                                                  format='%.2f')
-
-                    selected_model = Ridge(alpha=alpha_value)
 
             # End Regression Code ------------------------------------------------------------------------------------------
 
@@ -250,7 +255,7 @@ if 'data_file_data' in st.session_state:
             # End k-NN Code --------------------------------------------------------------------------------------------
 
             # Begin Random Forest Classifier Code ----------------------------------------------------------------------
-            def get_random_forest_model():
+            def get_random_forest_class_model():
                 #Selecting number of estimators
                 num_estimators = st.number_input('Enter the Number of Estimators.',
                                                  min_value=1,
@@ -281,16 +286,14 @@ if 'data_file_data' in st.session_state:
                     tree_depth = st.number_input('Enter the Maximum Depth of Each Tree.',
                                                  min_value=1,
                                                  step=1)
-                    return RandomForestClassifier(n_estimators=num_estimators,
-                                                            criterion=selected_criterion,
-                                                            max_depth=tree_depth,
-                                                            min_samples_split=num_min_samples_split
-                                                            )
                 else:
-                    return RandomForestClassifier(n_estimators=num_estimators,
-                                                            criterion=criterion_selection,
-                                                            min_samples_split=num_min_samples_split
-                                                            )
+                    tree_depth = None
+                return RandomForestClassifier(n_estimators=num_estimators,
+                                              criterion=criterion_selection,
+                                              max_depth=tree_depth,
+                                              min_samples_split=num_min_samples_split
+                                              )
+
 
                 # End Random Forest Classifier Code -------------------------------------------------------------------
 
@@ -352,7 +355,7 @@ if 'data_file_data' in st.session_state:
                 model_display_names = {
                     'Support Vector Machine (SVM)' : get_svm_model,
                     'k-Nearest Neighbors (k-NN)' : get_knn_model,
-                    'Random Forest Classifier' : get_random_forest_model,
+                    'Random Forest Classifier' : get_random_forest_class_model,
                     'Logistic Regression' : get_logistic_regression_model
                 }
 
@@ -368,9 +371,6 @@ if 'data_file_data' in st.session_state:
                     selected_model.fit(X_train, y_train)
                 except ValueError as e:
                     st.error(f"ValueError caught, ensure target variable is composed of discrete classes. {e}")
-                    st.write("y_train dtype:", y_train.dtype)
-                    st.write("Unique y_train values:", np.unique(y_train))
-                    st.write("y_train shape:", y_train.shape)
                     st.stop()
 
             # End Model Training Code ------------------------------------------------------------------------------------------
@@ -382,6 +382,7 @@ if 'data_file_data' in st.session_state:
                     y_pred = selected_model.predict(X_test)
                 except NotFittedError:
                     selected_model.fit(X_train, y_train)
+
 
                 # Begin Cross Validation Code --------------------------------------------------------------------------
                 # with st.expander('Cross Validation'):
