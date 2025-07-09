@@ -313,7 +313,12 @@ if 'data_file_data' in st.session_state:
             # End Classification Code --------------------------------------------------------------------------------------
 
                 st.session_state['unfitted_model'] = selected_model
-                selected_model.fit(X_train, y_train)
+
+                try:
+                    selected_model.fit(X_train, y_train)
+                except ValueError:
+                    st.error("ValueError caught, ensure target variable is composed of discrete classes.")
+                    st.stop()
 
             # End Model Training Code ------------------------------------------------------------------------------------------
 
@@ -326,31 +331,31 @@ if 'data_file_data' in st.session_state:
                     selected_model.fit(X_train, y_train)
 
                 # Begin Cross Validation Code --------------------------------------------------------------------------
-                with st.expander('Cross Validation'):
-                    if 'cv_confirmation' not in st.session_state:
-                        st.session_state['cv_confirmation'] = False
-
-                    if 'cv_ran' not in st.session_state:
-                        st.session_state['cv_ran'] = False
-
-                    if not st.session_state['cv_ran'] and not st.session_state['cv_confirmation']:
-                        st.warning("Cross validation can be computationally expensive. The number of folds has "
-                                    "been limited to 10.")
-                        if st.button("I understand"):
-                            st.session_state['cv_confirmation'] = True
-                            st.rerun()
-
-                    else:
-                        cv_folds = st.number_input('Enter number of cross validation folds',
-                                                   min_value = 2,
-                                                   max_value = 10,
-                                                   step = 1)
-
-                        if st.button('Begin Cross Validation'):
-                            cv_scores = cross_validate(st.session_state['unfitted_model'],
-                                                       X_train, y_train,
-                                                       cv = cv_folds)
-                        #TODO: Figure out what scores to output from cross validation
+                # with st.expander('Cross Validation'):
+                #     if 'cv_confirmation' not in st.session_state:
+                #         st.session_state['cv_confirmation'] = False
+                #
+                #     if 'cv_ran' not in st.session_state:
+                #         st.session_state['cv_ran'] = False
+                #
+                #     if not st.session_state['cv_ran'] and not st.session_state['cv_confirmation']:
+                #         st.warning("Cross validation can be computationally expensive. The number of folds has "
+                #                     "been limited to 10.")
+                #         if st.button("I understand"):
+                #             st.session_state['cv_confirmation'] = True
+                #             st.rerun()
+                #
+                #     else:
+                #         cv_folds = st.number_input('Enter number of cross validation folds',
+                #                                    min_value = 2,
+                #                                    max_value = 10,
+                #                                    step = 1)
+                #
+                #         if st.button('Begin Cross Validation'):
+                #             cv_scores = cross_validate(st.session_state['unfitted_model'],
+                #                                        X_train, y_train,
+                #                                        cv = cv_folds)
+                #         #TODO: Figure out what scores to output from cross validation
                 # End Cross Validation Code ---------------------------------------------------------------------------
 
                 if options_sup == 'Classification':

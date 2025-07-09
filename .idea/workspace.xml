@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="dddf0978-5059-481d-b500-f9f584531bb1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/data_preprocessing.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/data_preprocessing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/sup_learn.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/sup_learn.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,12 +34,12 @@
     &quot;assignee&quot;: &quot;grantmajor&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/grantmajor/AstrobiologyGUIFork.git&quot;,
-    &quot;accountId&quot;: &quot;0504fe8d-a4c6-4c1d-90d5-9a026690dd57&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/grantmajor/Multipage-Astrobiology-GUI.git",
+    "accountId": "0504fe8d-a4c6-4c1d-90d5-9a026690dd57"
   }
-}</component>
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 4
 }</component>
