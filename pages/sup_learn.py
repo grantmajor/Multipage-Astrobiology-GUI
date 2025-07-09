@@ -199,6 +199,47 @@ if 'data_file_data' in st.session_state:
                                               format='%.2f')
 
                 return  Ridge(alpha=alpha_value)
+            # End Ridge Code -------------------------------------------------------------------------------------------
+
+            def get_svr_model():
+                # Selecting C value
+                c_value = st.number_input('Input C Value',
+                                          min_value=0.0,
+                                          value=1.0,
+                                          step=0.01,
+                                          format="%.2f")
+
+                # Selecting Kernel
+                kernel_choice = st.selectbox('Select a Kernel',
+                                             ('Linear', 'Polynomial', 'Radial Basis Function', 'Sigmoid'),
+                                             index=0)
+                kernel_map = {'Linear': 'linear',
+                              'Polynomial': 'poly',
+                              'Radial Basis Function': 'rbf',
+                              'Sigmoid' : 'sigmoid'
+                              }
+
+                kernel_selection = kernel_map[kernel_choice]
+                # Sets degree to a default value in case kernel_type isn't polynomial and thus degree isn't declared
+                if kernel_selection == 'poly':
+                    st.number_input('Input degree',
+                                    value = 3,
+                                    step = 1,
+                                    min_value =1)
+                degree = 3
+
+                epsilon_value = st.number_input('Input epsilon value',
+                                                value=0.1,
+                                                step=0.01,
+                                                min_value=0.01)
+                return svm.SVR(C=c_value,
+                               kernel=kernel_selection,
+                               degree=degree,
+                               epsilon=epsilon_value)
+
+
+            # End SVM Code -----------------------
+
             if options_sup == "Regression":
                 if not st.session_state['target_is_number']:
                     st.error("Target variable is not a number. Regression cannot be used.")
@@ -206,7 +247,8 @@ if 'data_file_data' in st.session_state:
 
                 model_display_names = { 'Histogram Gradient Boosted Regression Tree' : get_hgbrt_model,
                                         'Random Forest Regressor' : get_random_forest_reg_model,
-                                        'Ridge Regressor' :get_ridge_model
+                                        'Ridge Regressor' :get_ridge_model,
+                                        'Support Vector Regressor': get_svr_model
                 }
 
                 model_choice = st.selectbox('Choose Regression Algorithm', list(model_display_names.keys()))
