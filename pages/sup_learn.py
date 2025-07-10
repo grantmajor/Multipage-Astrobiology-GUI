@@ -80,8 +80,8 @@ if 'data_file_data' in st.session_state:
 
             else:
                 if st.session_state['encoder_on']:
-                    X_train = st.session_state['X_train_encode_scaled']
-                    X_test = st.session_state['X_test_encode_scaled']
+                    X_train = st.session_state['X_train_encoded_scaled']
+                    X_test = st.session_state['X_test_encoded_scaled']
                 else:
                     st.warning("No encoder was selected in the preprocessing tab, proceeding with scaled data")
                     X_train = st.session_state['X_train_scaled']

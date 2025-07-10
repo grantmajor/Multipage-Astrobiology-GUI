@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, MaxAbsScaler, OneHotEncoder, \
     OrdinalEncoder, LabelEncoder, TargetEncoder
 from streamlit import columns
+import copy
 
 #Begin Data Upload Code
 st.subheader('Data')
@@ -144,58 +145,72 @@ if data is not None:
                                     index=data.index)
 
         if encoding_selection == 'One-Hot':
-            encoder = OneHotEncoder(sparse_output= False, handle_unknown='ignore')
+            sup_encoder = OneHotEncoder(sparse_output= False, handle_unknown='ignore')
+            unsup_encoder = copy.deepcopy(sup_encoder)
 
             #fits encoder to training data
-            encoder.fit(X_train[categorical_elements])
+            sup_encoder.fit(X_train[categorical_elements])
+            unsup_encoder.fit(X[categorical_elements])
 
             #Encode training data
-            X_train_encoded_cat = encode_data(encoder, X_train, categorical_elements, columns = True)
+            X_train_encoded_cat = encode_data(sup_encoder, X_train, categorical_elements, columns = True)
 
             #Encoding testing data with the encoder fit on the training data
-            X_test_encoded_cat = encode_data(encoder, X_test, categorical_elements, columns = True)
+            X_test_encoded_cat = encode_data(sup_encoder, X_test, categorical_elements, columns = True)
 
+
+            #Encoding data for unsupervised learning portion
+            X_encoded_cat = encode_data(unsup_encoder, X, categorical_elements, columns = True)
 
             st.session_state['encoder_on'] = True
 
             #Ordinal Encoding
         elif encoding_selection == 'Ordinal':
-            encoder = OrdinalEncoder()
+            sup_encoder = OrdinalEncoder()
+            unsup_encoder = copy.deepcopy(sup_encoder)
 
-            encoder.fit(X_train[categorical_elements])
+
+            sup_encoder.fit(X_train[categorical_elements])
+            unsup_encoder.fit(X[categorical_elements])
 
             #Encode training data
-            X_train_encoded_cat = encode_data(encoder, X_train, categorical_elements, columns = True)
+            X_train_encoded_cat = encode_data(sup_encoder, X_train, categorical_elements, columns = True)
 
             #Encoding testing data with the encoder fit on the training data
             try:
-                X_test_encoded_cat = encode_data(encoder, X_test, categorical_elements, columns = True)
+                X_test_encoded_cat = encode_data(sup_encoder, X_test, categorical_elements, columns = True)
             except ValueError as e:
                 st.error(f"Ordinal Encoding failed. There are likely categories in the testing set that were not seen in the "
-                         f"training set.")
+                         f"training set. {e}")
                 st.stop()
 
-            encoder.fit(X_train[categorical_elements])
+            X_encoded_cat = encode_data(unsup_encoder, X, categorical_elements, columns = True)
+
             st.session_state['encoder_on'] = True
 
         #Target Encoding
         #TODO: Make it so that column names are retained after encoding
         elif encoding_selection == 'Target (Supervised Only)':
-            encoder = TargetEncoder()
-            encoder.fit(X_train[categorical_elements], y_train)
+            sup_encoder = TargetEncoder()
+            unsup_encoder = copy.deepcopy(sup_encoder)
+
+            sup_encoder.fit(X_train[categorical_elements], y_train)
+            unsup_encoder.fit(X[categorical_elements], y)
 
             # Encode training data
-            X_train_encoded_cat = encode_data(encoder, X_train, categorical_elements, columns = False)
-
+            X_train_encoded_cat = encode_data(sup_encoder, X_train, categorical_elements, columns = False)
             # Encoding testing data with the encoder fit on the training data
-            X_test_encoded_cat = encode_data(encoder, X_test, categorical_elements, columns = False)
+            X_test_encoded_cat = encode_data(sup_encoder, X_test, categorical_elements, columns = False)
+
+            #Encode non-TTS split data
+            X_encoded_cat = encode_data(unsup_encoder, X, categorical_elements, columns = False)
 
             st.session_state['encoder_on'] = True
 
             X_train_encoded_cat.columns = X_train_encoded_cat.columns.astype(str)
             X_test_encoded_cat.columns = X_test_encoded_cat.columns.astype(str)
 
-
+            X_encoded_cat.columns = X_encoded_cat.columns.astype(str)
 
         else:
             st.session_state['encoder_on'] = False
@@ -207,13 +222,17 @@ if data is not None:
             X_train_encoded = pd.concat([X_train[numerical_elements], X_train_encoded_cat], axis=1)
             X_test_encoded = pd.concat([X_test[numerical_elements], X_test_encoded_cat], axis=1)
 
+            X_encoded = pd.concat([X[numerical_elements],X_encoded_cat], axis=1)
+
+
             if st.checkbox('Preview Encoded Data'):
                 st.dataframe(X_train_encoded.head())
 
 
             st.session_state.update({
                 'X_train_encoded' : X_train_encoded,
-                'X_test_encoded' : X_test_encoded
+                'X_test_encoded' : X_test_encoded,
+                'X_encoded' : X_encoded
             })
 
         else:
@@ -229,14 +248,15 @@ if data is not None:
 
     scaler = st.selectbox('Choose a feature scaler', options = ['Min-Max Scaling', 'Standardization'])
     if scaler == 'Min-Max Scaling':
-        scaler = MinMaxScaler()
+        sup_scaler = MinMaxScaler()
+        unsup_scaler = copy.deepcopy(sup_scaler)
     elif scaler == 'Standardization':
-        scaler = StandardScaler()
+        sup_scaler = StandardScaler()
+        unsup_scaler= copy.deepcopy(sup_scaler)
 
 
     def scale_data(scaler, data):
         """ Applies the specified, pre-fit scaler to the data
-
 
         :param scaler: A pre-fitted scaler to be applied to the data
         :param data: Array-like form of data, will be scaled
@@ -248,27 +268,36 @@ if data is not None:
 
 
     if st.session_state['encoder_on']:
-        scaler.fit(X_train_encoded)
 
-        X_train_encode_scaled = scale_data(scaler, X_train_encoded)
+        sup_scaler.fit(X_train_encoded)
+        unsup_scaler.fit(X_encoded)
 
-        X_test_encode_scaled = scale_data(scaler, X_test_encoded)
+        #scaling TTS split data
+        X_train_encode_scaled = scale_data(sup_scaler, X_train_encoded)
+        X_test_encode_scaled = scale_data(sup_scaler, X_test_encoded)
+
+        #scaling non-TTS data
+        X_encoded_scaled = scale_data(unsup_scaler, X_encoded)
 
         st.session_state.update({
         'X_test_encode_scaled': X_test_encode_scaled,
-        'X_train_encode_scaled': X_train_encode_scaled
+        'X_train_encode_scaled': X_train_encode_scaled,
+        'X_encoded_scaled' : X_encoded_scaled
         })
 
     else:
-        scaler.fit(X_train[numerical_elements])
+        sup_scaler.fit(X_train[numerical_elements])
+        unsup_scaler.fit(X[numerical_elements])
 
-        X_train_scaled =  scale_data(scaler, X_train[numerical_elements])
+        X_train_scaled =  scale_data(sup_scaler, X_train[numerical_elements])
+        X_test_scaled =  scale_data(sup_scaler, X_test[numerical_elements])
 
-        X_test_scaled =  scale_data(scaler, X_test[numerical_elements])
+        X_scaled = scale_data(unsup_scaler, X[numerical_elements])
 
         st.session_state.update({
             'X_train_scaled': X_train_scaled,
-            'X_test_scaled': X_test_scaled
+            'X_test_scaled': X_test_scaled,
+            'X_scaled' : X_scaled
         })
 
     view_data = st.radio('**Preview Data**',

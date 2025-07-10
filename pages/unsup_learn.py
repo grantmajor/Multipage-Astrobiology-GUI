@@ -28,7 +28,6 @@ if 'data_file_data' in st.session_state:
         st.subheader('**Here, the user can employ dimensionality reduction and clustering methods.**')
         st.divider()
 
-        # Remove Columns that are Strings
         data_form = st.radio(label='Select Form of Data',
                              options=['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
                              horizontal=True,
@@ -41,34 +40,26 @@ if 'data_file_data' in st.session_state:
         y_test = st.session_state['y_test']
 
         if data_form == 'Raw':
-            X_train = st.session_state['X_train']
-            X_test = st.session_state['X_test']
-
-            X_train = X_train.select_dtypes(include='number')
-            X_test = X_test.select_dtypes(include='number')
-
+            X = st.session_state['X_raw']
+            X = X.select_dtypes(include='number')
             st.warning("Non-numerical features will be dropped when handling raw data")
 
 
         elif data_form == 'Encoded':
             if st.session_state['encoder_on']:
-                X_train = st.session_state['X_train_encoded']
-                X_test = st.session_state['X_test_encoded']
+                X = st.session_state['X_encoded']
             else:
                 st.warning("No encoder was selected in the preprocessing tab, proceededing with raw data")
-                X_train = st.session_state['X_train']
-                X_test = st.session_state['X_test']
+                X = st.session_state['X_raw']
 
-                X_train = X_train.select_dtypes(include='number')
-                X_test = X_test.select_dtypes(include='number')
+                X = X.select_dtypes(include='number')
 
         elif data_form == 'Scaled':
-            X_train = st.session_state['X_train_scaled']
-            X_test = st.session_state['X_test_scaled']
+            X = st.session_state['X_scaled']
 
         else:
-            X_train = st.session_state['X_train_encode_scaled']
-            X_test = st.session_state['X_test_encode_scaled']
+            X = st.session_state['X_encoded_scaled']
+
 
 
         options = st.selectbox(label='Select Dimensionality Reduction Method',
@@ -80,8 +71,8 @@ if 'data_file_data' in st.session_state:
         # Set random state of the subsequent scripts
         np.random.seed(42)
 
-        X = st.session_state['X_raw']
-        y = st.session_state['y_raw']
+            # X = st.session_state['X_raw']
+            # y = st.session_state['y_raw']
 
 
         if options == 't-SNE':
