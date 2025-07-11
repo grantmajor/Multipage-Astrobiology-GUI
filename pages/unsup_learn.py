@@ -5,7 +5,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
+from sklearn.manifold import TSNE, MDS
 from sklearn.mixture import GaussianMixture
 from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import Pipeline
@@ -60,7 +60,8 @@ if 'data_file_data' in st.session_state:
         st.subheader("Dimensionality Reduction")
         dim_reduction_method = st.selectbox(label='Select Dimensionality Reduction Method',
                                                 options=['Standard PCA',
-                                                         't-SNE'])
+                                                         't-SNE',
+                                                         'Multidimensional Scaling'])
 
         # Begin t-SNE Code
         if dim_reduction_method == 't-SNE':
@@ -79,14 +80,13 @@ if 'data_file_data' in st.session_state:
                         max_iter=5000
                         )
             X_transformed = tsne.fit_transform(X)
-            X_transformed_df = pd.DataFrame({'tsne_1': X_transformed[:, 0],
+            tsne_df = pd.DataFrame({'tsne_1': X_transformed[:, 0],
                                            'tsne_2': X_transformed[:, 1]}
                                           )
-
-        # End t-SNE COde
+        # End t-SNE Code
 
         # Begin Standard PCA Cde
-        else:
+        elif dim_reduction_method == 'Standard PCA':
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
@@ -97,6 +97,21 @@ if 'data_file_data' in st.session_state:
 
 
         # End Standard PCA Code
+
+        # Begin Multidimensional Scaling Code
+        else:
+            n_components = st.number_input('Insert Number of Components',
+                                           min_value=2
+                                           )
+            mds = MDS(n_components=n_components,
+                      random_state=random_state)
+
+            X_transformed = mds.fit_transform(X)
+            mds_df = pd.DataFrame({"MDS_1" : X_transformed[:,0],
+                                    'MDS_2' : X_transformed[:,1]})
+
+
+
     # End Dimensionality Reduction Code
 
         st.divider()
@@ -165,7 +180,7 @@ if 'data_file_data' in st.session_state:
         if dim_reduction_method == 't-SNE':
             st.subheader('t-Distributed Stochastic Neighbor Embedding')
             fig, ax = plt.subplots()
-            fig = px.scatter(X_transformed_df,
+            fig = px.scatter(tsne_df,
                              x='tsne_1',
                              y='tsne_2',
                              color=labels,
@@ -237,3 +252,25 @@ if 'data_file_data' in st.session_state:
                       loc=2,
                       borderaxespad=0.0)
             st.plotly_chart(fig, use_container_width=True)
+
+        elif dim_reduction_method == 'Multidimensional Scaling':
+            st.subheader('Multidimensional Scaling')
+            fig, ax = plt.subplots()
+            fig = px.scatter(mds_df,
+                             x='MDS_1',
+                             y='MDS_2',
+                             color = labels,
+                             title=dim_reduction_method
+                             )
+            fig.update_traces(marker = dict(size=12,
+                                            line=dict(width=2,
+                                                      color='Black')))
+            ax.set_xlabel('MD 1')
+            ax.set_ylabel('MD 2')
+            ax.set_aspect('auto')
+            ax.legend('Cluster',
+                      bbox_to_anchor=(0.8, 0.95),
+                      loc=2,
+                      borderaxespad=0.0)
+            st.plotly_chart(fig, use_container_width=True)
+
