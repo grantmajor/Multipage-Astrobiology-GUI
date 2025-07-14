@@ -81,7 +81,14 @@ if 'data_file_data' in st.session_state:
             # Begin HistGradBoost --------------------------------------------------------------------------------------
 
             def get_hgbrt_model():
+                """ creates Histgram Gradient Boosting Regressor Tree (HGBRT) model with user-defined parameters
 
+                    Takes user input for the following model hyperparameters: loss function, quantile (if applicable),
+                    maximum number of leaves for each tree, and the maximum number of trees and returns a HGBRT model
+                    with the user specified parameters
+
+                :return: A HGBRT model with user-defined parameters
+                """
                 loss_map = { 'Squared Error' : 'squared_error',
                              'Absolute Error' : 'absolute_error',
                              'Poisson' : 'poisson',
@@ -138,6 +145,14 @@ if 'data_file_data' in st.session_state:
 
             # Begin Random Forest Regressor Code -- --------------------------------------------------------------------
             def get_random_forest_reg_model():
+                """ creates Random Forest Regressor model with user-defined parameters
+
+                    Takes user input for the following model hyperparameters: number of estimators, criterion, minimum
+                    number of samples for a split, and tree depth (if applicable) and returns a random forest regressor
+                    model with the user-specified hyperparameters
+
+                   :return: A Random Forest model with user-defined parameters
+                """
                 num_estimators = st.number_input(label='Enter the number of estimators.',
                                                  min_value=1,
                                                  step=1,
@@ -179,6 +194,13 @@ if 'data_file_data' in st.session_state:
 
             # Begin Ridge Code -----------------------------------------------------------------------------------------
             def get_ridge_model():
+                """ Creates Ridge Regressor model with user-defined parameters
+
+                    Takes user input for the following model hyperparameters: alpha, and returns a Ridge model with the
+                    user specified parameters
+
+                   :return: A Ridge Regressor model with user-defined parameters
+                """
                 alpha_value = st.number_input(label='Input Alpha Value',
                                               min_value=0.0,
                                               value=1.0,
@@ -189,6 +211,14 @@ if 'data_file_data' in st.session_state:
             # End Ridge Code -------------------------------------------------------------------------------------------
 
             def get_svr_model():
+                """ Creates Support Vector Regressor (SVR) model with user-defined parameters
+
+                    Takes user input for the following model hyperparameters: C value, kernel type, degree (if applicable),
+                    and epsilon value and returns an SVR model with the user specified parameters
+
+
+                     :return: An SVR model with user-defined parameters
+                  """
                 # Selecting C value
                 c_value = st.number_input('Input C Value',
                                           min_value=0.0,
@@ -249,6 +279,14 @@ if 'data_file_data' in st.session_state:
 
         # Begin SVM Code ------------------------------------------------------------------------
             def get_svm_model():
+                """ Creates Support Vector Machine (SVM) model with user-defined parameters
+
+                    Takes user input for the following model hyperparameters: C value, kernel type, and degree (if applicable),
+                    and returns an SVM model with the user specified parameters
+
+
+                     :return: An SVM model with user-defined parameters
+                  """
                 # Selecting C value
                 c_value = st.number_input('Input C Value',
                                           min_value=0.0,
@@ -276,15 +314,31 @@ if 'data_file_data' in st.session_state:
 
             # Begin k-NN Code ------------------------------------------------------------------------------------------
             def get_knn_model():
-               # Selecting k-Value
-               k_value = st.number_input('Input K Value.',
-                                        min_value=1,
-                                        value=1)
-               return KNeighborsClassifier(n_neighbors=k_value)
+                """ Creates k-Nearest Neighbors (k-NN) model with user-defined parameters
+
+                    Takes user input for the following model hyperparameters: k Value and returns an SVM model with the
+                    user specified parameters
+
+                     :return: An k-NN model with user-defined parameters
+                """
+                # Selecting k-Value
+                k_value = st.number_input('Input K Value.',
+                                         min_value=1,
+                                         value=1)
+                return KNeighborsClassifier(n_neighbors=k_value)
             # End k-NN Code --------------------------------------------------------------------------------------------
 
             # Begin Random Forest Classifier Code ----------------------------------------------------------------------
             def get_random_forest_class_model():
+                """ Creates Random Forest Classifier (RFC) model with user-defined parameters
+
+                    Takes user input for the following model hyperparameters: number of estimators, criterion, minimum
+                    number of samples for a split, and tree depth (if applicable) and returns an SVM model with the
+                    user specified parameters
+
+
+                     :return: An RFC model with user-defined parameters
+                  """
                 #Selecting number of estimators
                 num_estimators = st.number_input('Enter the Number of Estimators.',
                                                  min_value=1,
@@ -329,6 +383,14 @@ if 'data_file_data' in st.session_state:
 
                 # Begin Logistic Regressor Code -----------------------------------------------------------------------
             def get_logistic_regression_model():
+                """ Creates Logistic Regression model with user-defined parameters
+
+                      Takes user input for the following model hyperparameters: penalty, solver, C value (if applicable)
+                      and returns a Logistic regression model with the user specified parameters
+
+
+                       :return: A Logistic Regression model with user-defined parameters
+                    """
 
                 penalty_map = {'None' : None,
                                 'L2' : 'l2',
