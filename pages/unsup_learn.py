@@ -7,11 +7,13 @@ from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE, MDS
 from sklearn.mixture import GaussianMixture
+from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 
+from pages.data_preprocessing import train_proportion
 
 st.title('Unsupervised Learning')
 
@@ -28,6 +30,14 @@ col1, col2 = st.columns(2)
 if 'data_file_data' in st.session_state:
     random_state = 42
     with col1:
+
+        data_choices = ['Raw', 'Scaled']
+
+        if st.session_state['encoder_on']:
+            data_choices.append('Encoded')
+            data_choices.append('Encoded & Scaled')
+
+
         data_form = st.radio(label='Select Form of Data',
                              options=['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
                              horizontal=True,
@@ -42,12 +52,7 @@ if 'data_file_data' in st.session_state:
             st.warning("Non-numerical features will be dropped when handling raw data")
 
         elif data_form == 'Encoded':
-            if st.session_state['encoder_on']:
-                X = st.session_state['X_encoded']
-            else:
-                st.warning("No encoder was selected in the preprocessing tab, proceededing with raw data")
-                X = st.session_state['X_raw']
-                X = X.select_dtypes(include='number')
+            X = st.session_state['X_encoded']
 
         elif data_form == 'Scaled':
             X = st.session_state['X_scaled']
@@ -57,58 +62,98 @@ if 'data_file_data' in st.session_state:
 
         y = st.session_state['y_raw']
         # Begin Dimensionality Reduction Method Code
-        st.subheader("Dimensionality Reduction")
-        dim_reduction_method = st.selectbox(label='Select Dimensionality Reduction Method',
-                                                options=['Standard PCA',
-                                                         't-SNE',
-                                                         'Multidimensional Scaling'])
+
 
         # Begin t-SNE Code
-        if dim_reduction_method == 't-SNE':
 
+        def get_tsne_model():
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
             perplexity = st.number_input('Insert Perplexity',
                                          min_value=2
                                          )
-            tsne = TSNE(n_components,
+            return TSNE(n_components,
                         random_state=random_state,
                         perplexity=perplexity,
                         n_jobs=-1,
                         method='exact',
                         max_iter=5000
                         )
-            X_transformed = tsne.fit_transform(X)
-            tsne_df = pd.DataFrame({'tsne_1': X_transformed[:, 0],
-                                           'tsne_2': X_transformed[:, 1]}
-                                          )
+
+
         # End t-SNE Code
 
         # Begin Standard PCA Cde
-        elif dim_reduction_method == 'Standard PCA':
+        def get_pca_model():
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
 
-            pca = PCA(n_components=n_components,
+            return PCA(n_components=n_components,
                       random_state=random_state)
-            X_transformed = pca.fit_transform(X)
-
 
         # End Standard PCA Code
 
         # Begin Multidimensional Scaling Code
-        else:
+        def get_mds_model():
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
-            mds = MDS(n_components=n_components,
+            return MDS(n_components=n_components,
                       random_state=random_state)
 
-            X_transformed = mds.fit_transform(X)
-            mds_df = pd.DataFrame({"MDS_1" : X_transformed[:,0],
-                                    'MDS_2' : X_transformed[:,1]})
+
+        def split_fit_store(model, X):
+            try:
+                train_proportion = st.session_state['train_size']
+            except KeyError as e:
+                print('Training proportion was not set in data and preprocessing')
+                train_proportion = 0.75
+
+            X_train, X_test = train_test_split(X, train_size=train_proportion)
+            X_train = model.fit_transform(X_train)
+            X_test = model.transform(X_test)
+            st.session_state.update({'X_train_red' : X_train,
+                                     'X_test_red' : X_test})
+
+        def fit_split_store(model, X):
+            X_transformed = model.fit_transform(X)
+            X_train, X_test = train_test_split(X, train_size=train_proportion)
+            st.session_state.update({'X_train_red': X_train,
+                                     'X_test_red': X_test})
+            return X_transformed
+
+
+        model_display_names = {'t-SNE' : get_tsne_model,
+                               'Standard PCA' : get_pca_model,
+                               'Multidimensional Scaling' : get_mds_model}
+
+        st.subheader("Dimensionality Reduction")
+        dim_reduction_method = st.selectbox(label='Select Dimensionality Reduction Method',
+                                            options=['Standard PCA',
+                                                     't-SNE',
+                                                     'Multidimensional Scaling'])
+
+
+
+
+        if dim_reduction_method == 't-SNE':
+            tsne = get_tsne_model()
+            X_transformed = fit_split_store(tsne, X)
+            tsne_df = pd.DataFrame({'tsne_1': X_transformed[:, 0],
+                                   'tsne_2': X_transformed[:, 1]}
+                                   )
+        elif dim_reduction_method == 'Standard PCA':
+            pca = get_pca_model()
+            split_fit_store(pca, X)
+            X_transformed = pca.fit_transform(X)
+
+        elif dim_reduction_method == 'Multidimensional Scaling':
+            mds = get_mds_model()
+            X_transformed = fit_split_store(mds, X)
+            mds_df = pd.DataFrame({"MDS_1": X_transformed[:, 0],
+                                   'MDS_2': X_transformed[:, 1]})
 
 
 
@@ -187,7 +232,7 @@ if 'data_file_data' in st.session_state:
                              title=dim_reduction_method
                              )
             fig.update_traces(
-                marker=dict(size=8,
+                marker=dict(size=12,
                             line=dict(width=2,
                                       color='Black')
                             )

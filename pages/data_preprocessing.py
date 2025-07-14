@@ -96,6 +96,7 @@ if data is not None:
                                        value=0.75,
                                        step=0.01,
                                        format="%.2f", )
+    st.session_state['train_size'] = train_proportion
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_proportion)
 
 

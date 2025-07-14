@@ -41,57 +41,44 @@ if 'data_file_data' in st.session_state:
 
             st.divider()
 
+            data_options = {'Raw' : ('X_train', 'X_test'),
+                            'Scaled' : ('X_train_scaled', 'X_test_scaled')}
+
+            if all(key in st.session_state for key in ['X_train_encode_scaled', 'X_test_encode_scaled']):
+                data_options['Encoded'] = ('X_train_encoded', 'X_test_encoded')
+                data_options['Encoded & Scaled'] = ('X_train_encode_scaled', 'X_test_encode_scaled')
+
+
+            else:
+                st.error("Encoder not detected")
+
+            if all(key in st.session_state for key in ['X_train_red', 'X_test_red']):
+                data_options['Dimensionality Reduced'] = ('X_train_red', 'X_test_red')
+            else:
+                st.error("No DR data")
+
+
             data_form = st.radio(label = 'Select Form of Data',
-                                 options = ['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
-                                 horizontal = True,
-                                 captions = ['Raw data',
-                                             'Encoded data ',
-                                             'Scaled data',
-                                             'Encoded and scaled data'])
+                                 options = data_options.keys(),
+                                 horizontal = True
+            )
 
             y_train = st.session_state['y_train']
             y_test = st.session_state['y_test']
 
+            X_train_key, X_test_key = data_options[data_form]
+
+            X_train = st.session_state[X_train_key]
+            X_test = st.session_state[X_test_key]
+
             if data_form == 'Raw':
-                X_train = st.session_state['X_train']
-                X_test = st.session_state['X_test']
-
-                X_train = X_train.select_dtypes(include = 'number')
-                X_test = X_test.select_dtypes(include = 'number')
-
+                X_train = X_train.select_dtypes(include='number')
+                X_test = X_test.select_dtypes(include='number')
                 st.warning("Non-numerical features will be dropped when handling raw data")
-
-
-            elif data_form == 'Encoded':
-                if st.session_state['encoder_on']:
-                    X_train = st.session_state['X_train_encoded']
-                    X_test = st.session_state['X_test_encoded']
-                else:
-                    st.warning("No encoder was selected in the preprocessing tab, proceeding with raw data")
-                    X_train = st.session_state['X_train']
-                    X_test = st.session_state['X_test']
-
-                    X_train = X_train.select_dtypes(include='number')
-                    X_test = X_test.select_dtypes(include='number')
-
-            elif data_form == 'Scaled':
-                X_train = st.session_state['X_train_scaled']
-                X_test = st.session_state['X_test_scaled']
-
-            else:
-                if st.session_state['encoder_on']:
-                    X_train = st.session_state['X_train_encoded_scaled']
-                    X_test = st.session_state['X_test_encoded_scaled']
-                else:
-                    st.warning("No encoder was selected in the preprocessing tab, proceeding with scaled data")
-                    X_train = st.session_state['X_train_scaled']
-                    X_test = st.session_state['X_test_scaled']
-
-
 
             #Begin Regression Code -----------------------------------------------------------------------------------------
 
-                # Begin HistGradBoost --------------------------------------------------------------------------------------
+            # Begin HistGradBoost --------------------------------------------------------------------------------------
 
             def get_hgbrt_model():
 
