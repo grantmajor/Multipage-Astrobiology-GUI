@@ -5,10 +5,11 @@ from matplotlib import pyplot as plt
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import Ridge, LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, RocCurveDisplay, \
-    mean_absolute_percentage_error, mean_absolute_error, root_mean_squared_error, mean_squared_error
+    mean_absolute_percentage_error, mean_absolute_error, root_mean_squared_error, mean_squared_error, make_scorer, \
+    precision_score, recall_score, f1_score
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, HistGradientBoostingRegressor
 from sklearn import svm
-from sklearn.model_selection import train_test_split, cross_validate
+from sklearn.model_selection import train_test_split, cross_validate, StratifiedKFold, KFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from sklearn.utils.validation import check_is_fitted
@@ -21,6 +22,7 @@ st.title('Supervised Learning')
 #Checks to ensure that data is in the cache
 if 'data_file_data' not in st.session_state:
     st.warning('Data not uploaded, models cannot be trained.')
+    st.stop()
 else:
     data = st.session_state['data_file_data']
 
@@ -53,9 +55,9 @@ if 'data_file_data' in st.session_state:
                 st.error("Encoder not detected")
 
             if all(key in st.session_state for key in ['X_train_red', 'X_test_red']):
-                data_options['Dimensionality Reduced'] = ('X_train_red', 'X_test_red')
+                data_options['PCA Reduced'] = ('X_train_red', 'X_test_red')
             else:
-                st.error("No DR data")
+                print("No DR Data")
 
 
             data_form = st.radio(label = 'Select Form of Data',
@@ -385,11 +387,11 @@ if 'data_file_data' in st.session_state:
             def get_logistic_regression_model():
                 """ Creates Logistic Regression model with user-defined parameters
 
-                      Takes user input for the following model hyperparameters: penalty, solver, C value (if applicable)
-                      and returns a Logistic regression model with the user specified parameters
+                    Takes user input for the following model hyperparameters: penalty, solver, C value (if applicable)
+                    and returns a Logistic regression model with the user specified parameters
 
 
-                       :return: A Logistic Regression model with user-defined parameters
+                    :return: A Logistic Regression model with user-defined parameters
                     """
 
                 penalty_map = {'None' : None,
@@ -456,13 +458,13 @@ if 'data_file_data' in st.session_state:
                 selected_model = model_display_names[model_choice]()
                     # End Classification Code --------------------------------------------------------------------------
 
-                st.session_state['unfitted_model'] = selected_model
+            st.session_state['unfitted_model'] = selected_model
 
-                try:
-                    selected_model.fit(X_train, y_train)
-                except ValueError as e:
-                    st.error(f"ValueError caught, ensure target variable is composed of discrete classes. {e}")
-                    st.stop()
+            try:
+                selected_model.fit(X_train, y_train)
+            except ValueError as e:
+                st.error(f"ValueError caught, ensure target variable is composed of discrete classes. {e}")
+                st.stop()
 
             # End Model Training Code ------------------------------------------------------------------------------------------
 
@@ -476,32 +478,85 @@ if 'data_file_data' in st.session_state:
 
 
                 # Begin Cross Validation Code --------------------------------------------------------------------------
-                # with st.expander('Cross Validation'):
-                #     if 'cv_confirmation' not in st.session_state:
-                #         st.session_state['cv_confirmation'] = False
-                #
-                #     if 'cv_ran' not in st.session_state:
-                #         st.session_state['cv_ran'] = False
-                #
-                #     if not st.session_state['cv_ran'] and not st.session_state['cv_confirmation']:
-                #         st.warning("Cross validation can be computationally expensive. The number of folds has "
-                #                     "been limited to 10.")
-                #         if st.button("I understand"):
-                #             st.session_state['cv_confirmation'] = True
-                #             st.rerun()
-                #
-                #     else:
-                #         cv_folds = st.number_input('Enter number of cross validation folds',
-                #                                    min_value = 2,
-                #                                    max_value = 10,
-                #                                    step = 1)
-                #
-                #         if st.button('Begin Cross Validation'):
-                #             cv_scores = cross_validate(st.session_state['unfitted_model'],
-                #                                        X_train, y_train,
-                #                                        cv = cv_folds)
-                #         #TODO: Figure out what scores to output from cross validation
-                # End Cross Validation Code ---------------------------------------------------------------------------
+                with st.expander('Cross Validation'):
+                    if 'cv_confirmation' not in st.session_state:
+                        st.session_state['cv_confirmation'] = False
+
+                    if 'cv_ran' not in st.session_state:
+                        st.session_state['cv_ran'] = False
+
+                    if not st.session_state['cv_ran'] and not st.session_state['cv_confirmation']:
+                        st.warning("Cross validation can be computationally expensive. The number of folds has "
+                                    "been limited to 10.")
+                        if st.button("I understand"):
+                            st.session_state['cv_confirmation'] = True
+                            st.rerun()
+
+                    else:
+                        cv_folds = st.number_input('Enter number of cross validation folds',
+                                                   min_value = 2,
+                                                   max_value = 10,
+                                                   step = 1)
+
+                        if st.button('Begin Cross Validation'):
+                            if options_sup == 'Classification':
+                                scorers = {
+                                            'accuracy': 'accuracy',
+                                            'f1': make_scorer(f1_score, average='macro', zero_division=0),
+                                            'precision': make_scorer(precision_score, average='macro', zero_division=0),
+                                            'recall': make_scorer(recall_score, average='macro', zero_division=0),
+                                        }
+                                cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=42)
+
+                            elif options_sup == 'Regression':
+                                scorers = {'MAE' :  'neg_mean_absolute_error',
+                                           'MSE' : 'neg_mean_squared_error',
+                                           'MAPE' : 'neg_mean_absolute_percentage_error'
+                                            }
+                                cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
+
+
+
+                            cv_scores = cross_validate(st.session_state['unfitted_model'],
+                                                        X_train, y_train,
+                                                        cv=cv,
+                                                        n_jobs=-1,
+                                                        scoring= scorers)
+                            score_keys = [key for key in cv_scores if key.startswith('test_')]
+
+                            # Create summary (mean ± std)
+                            summary = {
+                                key.replace('test_', ''): f"{cv_scores[key].mean():.3f} ± {cv_scores[key].std():.3f}"
+                                for key in score_keys
+                            }
+
+                            # Convert to DataFrame for display
+                            summary_df = pd.DataFrame.from_dict(summary, orient='index', columns=['Score'])
+
+                            st.subheader('Cross-Validation Scores')
+                            st.dataframe(summary_df)
+                            fold_df = pd.DataFrame(
+                                {k.replace('test_', ''): v for k, v in cv_scores.items() if k.startswith('test_')})
+
+                            # Display table with fold-level results
+                            st.subheader("Per-Fold Cross-Validation Scores")
+                            st.dataframe(fold_df)
+
+                            # Plot bar chart using matplotlib/seaborn
+                            if options_sup == 'Classification':
+                                st.subheader("Cross-Validation Scores per Fold")
+                                fig, ax = plt.subplots(figsize=(8, 4))
+
+                                # Convert to long format for easy plotting
+                                df_long = fold_df.reset_index().melt(id_vars='index', var_name='Metric', value_name='Score')
+                                sns.barplot(data=df_long, x='index', y='Score', hue='Metric', ax=ax)
+
+                                ax.set_xlabel('Fold')
+                                ax.set_ylabel('Score')
+                                ax.set_title('Cross-Validation Scores per Fold')
+                                st.pyplot(fig)
+
+                #End Cross Validation Code ---------------------------------------------------------------------------
 
                 if options_sup == 'Classification':
                     try:

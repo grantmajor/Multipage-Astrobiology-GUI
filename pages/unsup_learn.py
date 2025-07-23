@@ -13,13 +13,14 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 
-from pages.data_preprocessing import train_proportion
+
 
 st.title('Unsupervised Learning')
 
 #Checks to ensure that data is in the cache
 if 'data_file_data' not in st.session_state:
     st.warning('Data not uploaded, models cannot be trained.')
+    st.stop()
 else:
     data = st.session_state['data_file_data']
 
@@ -67,6 +68,13 @@ if 'data_file_data' in st.session_state:
         # Begin t-SNE Code
 
         def get_tsne_model():
+            """ creates t-SNE model with user defined parameters
+
+                Takes user input for the following model hyperparameters: number of components and perplexity
+                and returns a t-SNE model with the user-specified hyperparameters
+
+               :return: A t-SNE model with user-defined parameters
+            """
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
@@ -84,8 +92,15 @@ if 'data_file_data' in st.session_state:
 
         # End t-SNE Code
 
-        # Begin Standard PCA Cde
+        # Begin Standard PCA Code
         def get_pca_model():
+            """ creates Standard PCA model with user defined parameters
+
+                Takes user input for the following model hyperparameters: number of components,
+                and returns a PCA model with the user-specified hyperparameters
+
+               :return: A PCA model with user-defined parameters
+            """
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
@@ -97,6 +112,13 @@ if 'data_file_data' in st.session_state:
 
         # Begin Multidimensional Scaling Code
         def get_mds_model():
+            """ creates MDS model with user defined parameters
+
+                Takes user input for the following model hyperparameters: number of components,
+                and returns an MDS model with the user-specified hyperparameters
+
+               :return: An MDS model with user-defined parameters
+            """
             n_components = st.number_input('Insert Number of Components',
                                            min_value=2
                                            )
@@ -105,6 +127,14 @@ if 'data_file_data' in st.session_state:
 
 
         def split_fit_store(model, X):
+            """ Fits model on the training set of X and stores output in Streamlit session state
+
+                Passes data to train test split. Model is fitted on X_train and is then used to transform X_train and
+                X_test. This newly transformed data is stored in Streamlit's session state to allow for later use.
+
+               :param model: A dimensionality reduction model that allows for fitting on X_train
+               :param X: A dataframe containing data that is to be transformed by the model
+            """
             try:
                 train_proportion = st.session_state['train_size']
             except KeyError as e:
@@ -117,13 +147,6 @@ if 'data_file_data' in st.session_state:
             st.session_state.update({'X_train_red' : X_train,
                                      'X_test_red' : X_test})
 
-        def fit_split_store(model, X):
-            X_transformed = model.fit_transform(X)
-            X_train, X_test = train_test_split(X, train_size=train_proportion)
-            st.session_state.update({'X_train_red': X_train,
-                                     'X_test_red': X_test})
-            return X_transformed
-
 
         model_display_names = {'t-SNE' : get_tsne_model,
                                'Standard PCA' : get_pca_model,
@@ -135,12 +158,9 @@ if 'data_file_data' in st.session_state:
                                                      't-SNE',
                                                      'Multidimensional Scaling'])
 
-
-
-
         if dim_reduction_method == 't-SNE':
             tsne = get_tsne_model()
-            X_transformed = fit_split_store(tsne, X)
+            X_transformed = tsne.fit_transform(X)
             tsne_df = pd.DataFrame({'tsne_1': X_transformed[:, 0],
                                    'tsne_2': X_transformed[:, 1]}
                                    )
@@ -151,7 +171,7 @@ if 'data_file_data' in st.session_state:
 
         elif dim_reduction_method == 'Multidimensional Scaling':
             mds = get_mds_model()
-            X_transformed = fit_split_store(mds, X)
+            X_transformed = mds.fit_transform(X)
             mds_df = pd.DataFrame({"MDS_1": X_transformed[:, 0],
                                    'MDS_2': X_transformed[:, 1]})
 
