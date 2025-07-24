@@ -37,6 +37,8 @@ if 'data_file_name' in st.session_state:
 if 'data_file_data' in st.session_state:
     data = st.session_state['data_file_data']
 
+
+
 if data is not None:
 
     # Remove Columns that are Strings
@@ -46,19 +48,36 @@ if data is not None:
     X_num = data.select_dtypes(include = np.number)
     X_cat = data.select_dtypes(exclude = np.number)
 
+    if 'num_features' not in st.session_state:
+        st.session_state['num_features'] = X_num.columns
+
+    if 'cat_features' not in st.session_state:
+        st.session_state['cat_features'] = []
+
+    if 'target' not in st.session_state:
+        st.session_state['target'] = None
 
     numerical_elements = st.multiselect("Select Numerical Explanatory Variables (default is all numerical columns)",
-                                  X_num.columns,
+                                  options=X_num.columns,
                                   placeholder='Choose Option',
-                                  default=X_num.columns,
+                                  default=st.session_state['num_features']
                                 )
 
-    #TODO: Make it so that categorical variables are not deselected when changes are detected in numerical_elements
+    if list(numerical_elements) != list(st.session_state['num_features']):
+        st.session_state['num_features'] = numerical_elements
+
+
     non_num_elements = [col for col in data if col not in numerical_elements]
     categorical_elements = st.multiselect("Select Categorical Explanatory Variables",
-                                          non_num_elements,
+                                          options=non_num_elements,
                                           placeholder='Choose Option',
+                                          default=st.session_state['cat_features']
                                           )
+
+    if list(categorical_elements) != list(st.session_state['cat_features']):
+        st.session_state['cat_features'] = categorical_elements
+
+
     elements = np.concatenate((numerical_elements, categorical_elements))
 
     y = data.dropna()
@@ -70,8 +89,14 @@ if data is not None:
 
     target = st.selectbox('Choose Target',
                               options=unselected_elements,
-                              placeholder='Choose Option'
+                              placeholder='Choose Option',
+
                               )
+
+    if target != st.session_state['target']:
+        st.session_state['target'] = target
+
+
     if target is not None:
         X = X[elements]
         y = y[target]
@@ -87,7 +112,7 @@ if data is not None:
 
     st.session_state.update({
         'X_raw' : X,
-        'y_raw' : y
+        'y_raw' : y,
     })
 
     # Begin Train Test Split Code
