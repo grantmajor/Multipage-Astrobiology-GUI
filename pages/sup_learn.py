@@ -33,6 +33,11 @@ model_tab, pred_tab = st.tabs(['Model', 'Predictions'])
 # Begin Model Training Code --------------------------------------------------------------------------------------------
 
 if 'data_file_data' in st.session_state:
+
+    if 'model_comparison_history' not in st.session_state:
+        st.session_state['model_comparison_history'] = []
+
+
     with model_tab:
         col1, col2 = st.columns(spec=2, gap='small', vertical_alignment='top')
         with col1:
@@ -81,7 +86,6 @@ if 'data_file_data' in st.session_state:
             #Begin Regression Code -----------------------------------------------------------------------------------------
 
             # Begin HistGradBoost --------------------------------------------------------------------------------------
-
             def get_hgbrt_model():
                 """ creates Histgram Gradient Boosting Regressor Tree (HGBRT) model with user-defined parameters
 
@@ -142,7 +146,6 @@ if 'data_file_data' in st.session_state:
                                                      max_iter=max_num_iter,
                                                      max_leaf_nodes=max_leaf
                                                      )
-
             # End HistGradBoost Code -----------------------------------------------------------------------------------
 
             # Begin Random Forest Regressor Code -- --------------------------------------------------------------------
@@ -191,7 +194,6 @@ if 'data_file_data' in st.session_state:
                                              max_depth=tree_depth,
                                              min_samples_split=num_min_samples_split
                                              )
-
             # End Random Forest Regressor Code  ------------------------------------------------------------------------
 
             # Begin Ridge Code -----------------------------------------------------------------------------------------
@@ -212,6 +214,7 @@ if 'data_file_data' in st.session_state:
                 return  Ridge(alpha=alpha_value)
             # End Ridge Code -------------------------------------------------------------------------------------------
 
+            #Begin SVR Code -------------------------------------------------------------------------------------------
             def get_svr_model():
                 """ Creates Support Vector Regressor (SVR) model with user-defined parameters
 
@@ -255,9 +258,8 @@ if 'data_file_data' in st.session_state:
                                kernel=kernel_selection,
                                degree=degree,
                                epsilon=epsilon_value)
+            #End SVR Code ----------------------------------------------------------------------------------------------
 
-
-            # End SVM Code -----------------------
 
             if options_sup == "Regression":
                 if not st.session_state['target_is_number']:
@@ -311,7 +313,6 @@ if 'data_file_data' in st.session_state:
                 return svm.SVC(C=c_value,
                                kernel=kernel_selection,
                                degree=degree)
-
             # End SVM Code ---------------------------------------------------------------------------------------------
 
             # Begin k-NN Code ------------------------------------------------------------------------------------------
@@ -384,6 +385,9 @@ if 'data_file_data' in st.session_state:
 
 
                 # Begin Logistic Regressor Code -----------------------------------------------------------------------
+            #End Random Forest Classifier Code -------------------------------------------------------------------------
+
+            #Begin Logistic Regression Code ----------------------------------------------------------------------------
             def get_logistic_regression_model():
                 """ Creates Logistic Regression model with user-defined parameters
 
@@ -443,6 +447,7 @@ if 'data_file_data' in st.session_state:
                 except ValueError as e:
                     st.error(f"Invalid solver/penalty/multiclass combo: {e}")
                     st.stop()
+            #End Logistic Regression Code ------------------------------------------------------------------------------
 
             if options_sup == 'Classification':
                 model_display_names = {
@@ -456,15 +461,10 @@ if 'data_file_data' in st.session_state:
 
                 model_choice = st.selectbox('Choose Classification Algorithm', list(model_display_names.keys()))
                 selected_model = model_display_names[model_choice]()
+
+
                     # End Classification Code --------------------------------------------------------------------------
-
             st.session_state['unfitted_model'] = selected_model
-
-            try:
-                selected_model.fit(X_train, y_train)
-            except ValueError as e:
-                st.error(f"ValueError caught, ensure target variable is composed of discrete classes. {e}")
-                st.stop()
 
             # End Model Training Code ------------------------------------------------------------------------------------------
 
@@ -474,7 +474,78 @@ if 'data_file_data' in st.session_state:
                 try:
                     y_pred = selected_model.predict(X_test)
                 except NotFittedError:
-                    selected_model.fit(X_train, y_train)
+                    try:
+                        selected_model.fit(X_train, y_train)
+                        y_pred = selected_model.predict(X_test)
+
+                    except ValueError as e:
+                        st.error(f"Model fitting failed: {e}")
+                        st.stop()
+
+                except ValueError as e:
+                    st.error(f"Prediction failed: {e}")
+                    st.stop()
+
+
+                if st.session_state.get("target_is_number", True):
+                    metrics = {
+                            'MSE' : mean_squared_error(y_test, y_pred),
+                            'RMSE' : root_mean_squared_error(y_test, y_pred),
+                            'MAE' : mean_absolute_error(y_test, y_pred),
+                            'MAPE' : mean_absolute_percentage_error(y_test, y_pred)
+                    }
+
+                    display_cols = list(metrics.keys())
+                    is_regression = True
+                else:
+                    metrics = {
+                        'Accuracy': accuracy_score(y_test, y_pred),
+                        'F1': f1_score(y_test, y_pred, average='weighted'),
+                        'Precision' : precision_score(y_test, y_pred, average='weighted'),
+                        'Recall' : recall_score(y_test,y_pred, average='weighted')
+                    }
+
+                    display_cols = list(metrics.keys())
+                    is_regression = False
+
+                st.session_state['model_comparison_history'].append({
+                    "Model": selected_model.__class__.__name__,
+                    "is_regression" : is_regression,
+                    "Metrics": metrics
+                })
+
+                with st.expander('Model Comparison History'):
+                    history_df = pd.DataFrame(st.session_state['model_comparison_history'])
+
+                    if not history_df.empty and 'Metrics' in history_df.columns and history_df[
+                        'Metrics'].notnull().all():
+                        metrics_df = pd.json_normalize(history_df['Metrics'])
+                        combined_df = pd.concat([history_df.drop(columns=['Metrics']), metrics_df], axis=1)
+
+                        # Define metric groups
+                        regression_metrics = ['MSE', 'RMSE', 'MAE', 'MAPE']
+                        classification_metrics = ['Accuracy', 'F1', 'Precision', 'Recall']
+
+                        # Filter rows by task type using options_sup
+                        if options_sup == "Regression":
+                            filtered_df = combined_df[combined_df['is_regression'] == True]
+                            metric_cols = [col for col in regression_metrics if col in filtered_df.columns]
+                        elif options_sup == "Classification":
+                            filtered_df = combined_df[combined_df['is_regression'] == False]
+                            metric_cols = [col for col in classification_metrics if col in filtered_df.columns]
+                        else:
+                            st.warning("Unknown task type.")
+                            st.stop()
+
+                        # Final display columns
+                        display_cols = ['Model'] + metric_cols
+
+                        # Show final filtered table
+                        st.dataframe(filtered_df[display_cols])
+                    else:
+                        st.info("No models have been evaluated yet.")
+
+
 
 
                 # Begin Cross Validation Code --------------------------------------------------------------------------
