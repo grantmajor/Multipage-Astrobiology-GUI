@@ -1,6 +1,8 @@
+import shap
 import streamlit as st
 import pandas as pd
 import numpy as np
+from shap import TreeExplainer, LinearExplainer, KernelExplainer
 from matplotlib import pyplot as plt
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import Ridge, LogisticRegression
@@ -471,6 +473,15 @@ if 'data_file_data' in st.session_state:
             # Begin Model Metrics Code -----------------------------------------------------------------------------------------
             with col2:
                 st.subheader("Model Performance Metrics")
+
+                if options_sup == "Classification":
+                    label_encoder = LabelEncoder()
+                    y_train = label_encoder.fit_transform(y_train)
+                    y_test = label_encoder.transform(y_test)
+
+                    # Store the encoder in session_state if needed for later inverse_transform
+                    st.session_state["label_encoder"] = label_encoder
+
                 try:
                     y_pred = selected_model.predict(X_test)
                 except NotFittedError:
@@ -514,6 +525,7 @@ if 'data_file_data' in st.session_state:
                     "Metrics": metrics
                 })
 
+                #Begin Model Comparison History Code ------------------------------------------------------------------
                 with st.expander('Model Comparison History'):
                     history_df = pd.DataFrame(st.session_state['model_comparison_history'])
 
@@ -544,9 +556,7 @@ if 'data_file_data' in st.session_state:
                         st.dataframe(filtered_df[display_cols])
                     else:
                         st.info("No models have been evaluated yet.")
-
-
-
+                #End Model Comparison History Code ---------------------------------------------------------------------
 
                 # Begin Cross Validation Code --------------------------------------------------------------------------
                 with st.expander('Cross Validation'):
@@ -626,7 +636,6 @@ if 'data_file_data' in st.session_state:
                                 ax.set_ylabel('Score')
                                 ax.set_title('Cross-Validation Scores per Fold')
                                 st.pyplot(fig)
-
                 #End Cross Validation Code ---------------------------------------------------------------------------
 
                 if options_sup == 'Classification':
@@ -637,11 +646,10 @@ if 'data_file_data' in st.session_state:
 
 
                     # Begin Classification Report Code--------------------------------------------------------------------------
-                    class_report = classification_report(y_test, y_pred, output_dict = True)
                     with st.expander('Classification Report'):
+                        class_report = classification_report(y_test, y_pred, output_dict=True)
                         class_report = pd.DataFrame(class_report).transpose()
                         st.table(class_report)
-
                     #End Classification Report Code ----------------------------------------------------------------------------
 
                     #Begin Confusion Matrix Code ----------------- -------------------------------------------------------------
@@ -682,7 +690,6 @@ if 'data_file_data' in st.session_state:
 
                         fig.tight_layout()
                         st.pyplot(fig)
-
                     # End Confusion Matrix Code---------------------------------------------------------------------------------
 
                 # End Classification Metrics Code ------------------------------------------------------------------------------
@@ -695,14 +702,13 @@ if 'data_file_data' in st.session_state:
                         st.error('Model has not been fitted. Model metrics cannot be calculated.')
 
                     # Begin Regression Loss Function Code ----------------------------------------------------------------------
-
-                    y_pred = selected_model.predict(X_test)
-                    MSE = mean_squared_error(y_test, y_pred)
-                    RMSE = root_mean_squared_error(y_test, y_pred)
-                    MAE = mean_absolute_error(y_test, y_pred)
-                    MAPE = mean_absolute_percentage_error(y_test, y_pred)
-
                     with st.expander('Loss Functions'):
+                        y_pred = selected_model.predict(X_test)
+                        MSE = mean_squared_error(y_test, y_pred)
+                        RMSE = root_mean_squared_error(y_test, y_pred)
+                        MAE = mean_absolute_error(y_test, y_pred)
+                        MAPE = mean_absolute_percentage_error(y_test, y_pred)
+
                         reg_metrics = pd.DataFrame([{
                             'Mean Squared Error': MSE,
                             'Root Mean Squared Error': RMSE,
@@ -715,10 +721,91 @@ if 'data_file_data' in st.session_state:
                         reg_metrics.columns = ['Loss Function', 'Value']
 
                         st.dataframe(reg_metrics, hide_index=True)
-
                     # End Regression Loss Function Code ------------------------------------------------------------------------
 
                 #End Regression Metrics Code -----------------------------------------------------------------------------------
+
+                #Begin Feature Importance Code -----------------------------------------------------------------------
+                with st.expander('Feature Importance (SHAP)'):
+                    shap.initjs()
+                    if 'shap_values' not in st.session_state:
+                        st.session_state['shap_values'] = None
+                        st.session_state['class_count'] = 0
+
+                    if st.button('Generate SHAP Plots'):
+                        try:
+                            check_is_fitted(selected_model)
+
+                            if hasattr(selected_model, "predict_proba"):
+                                predict_fn = lambda x: selected_model.predict_proba(x)
+                            else:
+                                predict_fn = lambda x: selected_model.predict(x)
+
+                            with st.spinner("Generating SHAP values..."):
+                                model_type = type(selected_model)
+                                test_sample = X_test[:50] if len(X_test) > 50 else X_test
+                                background_data = X_train.sample(n=min(100, len(X_train)), random_state=42)
+
+                                if model_type in [RandomForestClassifier, RandomForestRegressor,
+                                                  HistGradientBoostingRegressor]:
+                                    explainer = shap.TreeExplainer(selected_model)
+                                elif model_type in [Ridge, LogisticRegression]:
+                                    explainer = shap.LinearExplainer(selected_model, X_train)
+                                elif model_type in [svm.SVC, svm.SVR, KNeighborsClassifier]:
+                                    explainer = shap.KernelExplainer(predict_fn, background_data)
+                                else:
+                                    explainer = shap.Explainer(predict_fn, X_train)
+                                    
+                                shap_vals = explainer(test_sample)
+
+                                # Save results to session state
+                                st.session_state['shap_values'] = shap_vals
+
+                                if isinstance(shap_vals, list):
+                                    st.session_state['class_count'] = len(shap_vals)
+                                elif hasattr(shap_vals, "values") and shap_vals.values.ndim == 3:
+                                    st.session_state['class_count'] = shap_vals.values.shape[2]
+                                else:
+                                    st.session_state['class_count'] = 0
+
+                        except NotFittedError:
+                            st.error("Model is not fitted. SHAP explanations cannot be generated.")
+                        except Exception as e:
+                            st.error(f"SHAP explanation failed: {e}")
+
+                    # Now outside the button, show the class selector if shap_values exist and multiple classes
+                    if st.session_state['shap_values'] is not None:
+                        shap_values = st.session_state['shap_values']
+
+                        if st.session_state['class_count'] > 1:
+                            class_idx = st.selectbox("Select class index for SHAP plots:",
+                                                     options=list(range(st.session_state['class_count'])),
+                                                     key='shap_class_idx')
+                        else:
+                            class_idx = 0
+
+                        # Select correct shap_values to plot
+                        if isinstance(shap_values, list):
+                            shap_values_to_plot = shap_values[class_idx]
+                        elif hasattr(shap_values, "values") and shap_values.values.ndim == 3:
+                            shap_values_to_plot = shap.Explanation(
+                                values=shap_values.values[:, :, class_idx],
+                                base_values=shap_values.base_values[:, class_idx],
+                                data=shap_values.data,
+                                feature_names=shap_values.feature_names
+                            )
+                        else:
+                            shap_values_to_plot = shap_values
+
+                        st.subheader("SHAP Summary Plot")
+                        fig_summary, ax_summary = plt.subplots()
+                        shap.plots.beeswarm(shap_values_to_plot, show=False)
+                        st.pyplot(fig_summary)
+
+                        st.subheader("SHAP Bar Plot (Feature Importance)")
+                        fig_bar, ax_bar = plt.subplots()
+                        shap.plots.bar(shap_values_to_plot, show=False)
+                        st.pyplot(fig_bar)
 
             # End Model Metrics Code -------------------------------------------------------------------------------------------
 
