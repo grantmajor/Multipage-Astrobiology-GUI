@@ -9,19 +9,46 @@ from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, Ma
 from streamlit import columns
 import copy
 
-#Begin Data Upload Code
+import hashlib
+
+# Begin Data Upload Code
 st.subheader('Data')
-data_file = None
+data_file = st.file_uploader('Upload a data file', type='csv', key='data_file')
+
+
+def get_file_hash(uploaded_file):
+    file_bytes = uploaded_file.getvalue()
+    return hashlib.sha256(file_bytes).hexdigest()
+
+
 data = None
 
-if data_file is None and 'data' not in st.session_state:
-    data_file = st.file_uploader('Upload a data file', type='csv', key = 'data_file')
-
-#saves data and name of file to a persistent cache
 if data_file is not None:
+    file_hash = get_file_hash(data_file)
+
+    # Check if this is a new file based on hash (not just name)
+    new_file_uploaded = (
+            'data_file_hash' not in st.session_state or
+            st.session_state['data_file_hash'] != file_hash
+    )
+
     data = pd.read_csv(data_file)
+
+    # Always update data
     st.session_state['data_file_data'] = data
     st.session_state['data_file_name'] = data_file.name
+    st.session_state['data_file_hash'] = file_hash
+
+    if new_file_uploaded:
+        # Auto-reset feature selections for new dataset
+        X_num = data.select_dtypes(include=np.number)
+        X_cat = data.select_dtypes(exclude=np.number)
+
+        st.session_state['num_features'] = list(X_num.columns)
+        st.session_state['cat_features'] = []
+        st.session_state['target'] = None
+
+        st.info("New dataset detected. Feature selections have been reset.")
 
 #runs when data is detected in the persistent cache
 if 'data_file_name' in st.session_state:

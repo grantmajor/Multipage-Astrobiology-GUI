@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from shap import TreeExplainer, LinearExplainer, KernelExplainer
+import plotly.express as px
 from matplotlib import pyplot as plt
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import Ridge, LogisticRegression
@@ -638,6 +639,7 @@ if 'data_file_data' in st.session_state:
                                 st.pyplot(fig)
                 #End Cross Validation Code ---------------------------------------------------------------------------
 
+                #Begin Classification Metrics ------------------------------------------------------------------------------
                 if options_sup == 'Classification':
                     try:
                         check_is_fitted(selected_model)
@@ -723,6 +725,38 @@ if 'data_file_data' in st.session_state:
                         st.dataframe(reg_metrics, hide_index=True)
                     # End Regression Loss Function Code ------------------------------------------------------------------------
 
+                    with st.expander('Expected vs Actual'):
+                        def plot_predicted_vs_actual(y, y_pred, title="Predicted vs Actual"):
+                            df = pd.DataFrame({
+                                'Actual': y,
+                                'Predicted': y_pred
+                            })
+
+                            fig = px.scatter(
+                                df, x='Actual', y='Predicted',
+                                title=title,
+                                labels={'Actual': 'Actual Values', 'Predicted': 'Predicted Values'},
+                                opacity=0.7
+                            )
+
+                            # Add a perfect prediction line (y = x)
+                            fig.add_shape(
+                                type='line',
+                                x0=min(y), y0=min(y),
+                                x1=max(y), y1=max(y),
+                                line=dict(color='red', dash='dash'),
+                                name='Perfect Prediction'
+                            )
+
+                            fig.update_layout(showlegend=False)
+                            return fig
+
+
+                        # Example usage in Streamlit
+                        st.title("Regression Model Evaluation")
+
+                        st.plotly_chart(plot_predicted_vs_actual(y_test, y_pred))
+
                 #End Regression Metrics Code -----------------------------------------------------------------------------------
 
                 #Begin Feature Importance Code -----------------------------------------------------------------------
@@ -755,7 +789,7 @@ if 'data_file_data' in st.session_state:
                                     explainer = shap.KernelExplainer(predict_fn, background_data)
                                 else:
                                     explainer = shap.Explainer(predict_fn, X_train)
-                                    
+
                                 shap_vals = explainer(test_sample)
 
                                 # Save results to session state
@@ -806,6 +840,7 @@ if 'data_file_data' in st.session_state:
                         fig_bar, ax_bar = plt.subplots()
                         shap.plots.bar(shap_values_to_plot, show=False)
                         st.pyplot(fig_bar)
+                #End Feature Importance Code -------------------------------------------------------------------------
 
             # End Model Metrics Code -------------------------------------------------------------------------------------------
 
