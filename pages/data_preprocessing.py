@@ -2,6 +2,7 @@ import numbers
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, MaxAbsScaler, OneHotEncoder, \
@@ -51,24 +52,38 @@ if data_file is not None:
         st.info("New dataset detected. Feature selections have been reset.")
 
 #runs when data is detected in the persistent cache
-if 'data_file_name' in st.session_state:
-    st.success(f"Current dataset: {st.session_state.data_file_name}.")
-    show_data = st.checkbox(label = 'Preview data')
-    if show_data:
-        st.dataframe(st.session_state['data_file_data'].head())
 
 #End Data Upload Code
-
 
 #Begin Preprocessing Code
 if 'data_file_data' in st.session_state:
     data = st.session_state['data_file_data']
 
-
-
 if data is not None:
 
     # Remove Columns that are Strings
+
+    display_choice = st.radio('',
+                              options=['Data',
+                                       'Correlation Matrix'],
+                              horizontal=True)
+
+    if display_choice == 'Data':
+        st.markdown('**Data Preview**')
+        st.dataframe(data.head())
+    if display_choice == 'Correlation Matrix':
+        corr_matrix = data.select_dtypes(include=np.number).corr()
+
+        fig = px.imshow(
+            corr_matrix,
+            text_auto=True,
+            title='Correlation Matrix',
+            aspect='auto'
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
     st.subheader('Data and Hyperparameter Selection')
 
     X = data.replace([np.inf, -np.inf], np.nan).dropna(axis=0)
