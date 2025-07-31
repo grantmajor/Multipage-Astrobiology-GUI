@@ -124,33 +124,44 @@ if data is not None:
 
     y = data.dropna()
 
+    # Filter out any already selected explanatory variables from the target options
     unselected_elements = [col for col in data if col not in elements]
 
+    # Warn if all columns are selected as explanatory variables
     if len(unselected_elements) == 0:
         st.warning("All possible variables have been selected. Deselect a variable to choose a target.")
+        st.stop()
 
-    target = st.selectbox('Choose Target',
-                          options=unselected_elements,
-                          placeholder='Choose Option'
-                          )
+    # Default to previous target if it exists in the available options
+    if 'target' in st.session_state and st.session_state['target'] in unselected_elements:
+        default_target = st.session_state['target']
+    else:
+        default_target = unselected_elements[0]  # fallback default
 
-    if target != st.session_state['target']:
-        st.session_state['target'] = target
-        try:
-            target_index = unselected_elements.index(target)
+    # Let user select target
+    target = st.selectbox(
+        'Select Target',
+        options=unselected_elements,
+        index=unselected_elements.index(default_target)
+    )
 
-        except ValueError as e:
-            print(f"Target not found: {e}")
+    # Save the selected target to session state
+    st.session_state['target'] = target
 
+    # Check for overlap with explanatory variables
+    if target in elements:
+        st.warning("Overlapping target and explanatory variables detected.")
+        st.stop()
 
-        if target is not None:
-            X = X[elements]
-            y = y[target]
-            if isinstance(y[1], numbers.Number):
-                st.session_state['target_is_number'] = True
-            else:
-                st.session_state['target_is_number'] = False
+    # Assign X and y properly
+    X = data[elements]
+    y = data[target]  
 
+    # Check target type
+    if isinstance(y.iloc[0], numbers.Number):
+        st.session_state['target_is_number'] = True
+    else:
+        st.session_state['target_is_number'] = False
 
         if target is not None and target in elements:
             st.warning("Overlapping target and explanatory variables detected.")
@@ -317,13 +328,15 @@ if data is not None:
     st.subheader('Feature Scaling')
 
 
-    scaler = st.selectbox('Choose a feature scaler', options = ['Min-Max Scaling', 'Standardization'])
+    scaler = st.selectbox('Select a Feature Scaling Technique', options = ['None', 'Min-Max Scaling', 'Standardization'], index=0)
     if scaler == 'Min-Max Scaling':
         sup_scaler = MinMaxScaler()
         unsup_scaler = copy.deepcopy(sup_scaler)
+        st.session_state['scaler_on'] = True
     elif scaler == 'Standardization':
         sup_scaler = StandardScaler()
         unsup_scaler= copy.deepcopy(sup_scaler)
+        st.session_state['scaler_on'] = True
 
 
     def scale_data(scaler, data):
@@ -337,50 +350,51 @@ if data is not None:
                             columns = data.columns,
                             index = data.index)
 
+    if st.session_state['scaler_on']:
+        if st.session_state['encoder_on']:
 
-    if st.session_state['encoder_on']:
+            sup_scaler.fit(X_train_encoded)
+            unsup_scaler.fit(X_encoded)
 
-        sup_scaler.fit(X_train_encoded)
-        unsup_scaler.fit(X_encoded)
+            #scaling TTS split data
+            X_train_encode_scaled = scale_data(sup_scaler, X_train_encoded)
+            X_test_encode_scaled = scale_data(sup_scaler, X_test_encoded)
 
-        #scaling TTS split data
-        X_train_encode_scaled = scale_data(sup_scaler, X_train_encoded)
-        X_test_encode_scaled = scale_data(sup_scaler, X_test_encoded)
+            #scaling non-TTS data
+            X_encoded_scaled = scale_data(unsup_scaler, X_encoded)
 
-        #scaling non-TTS data
-        X_encoded_scaled = scale_data(unsup_scaler, X_encoded)
+            st.session_state.update({
+            'X_test_encode_scaled': X_test_encode_scaled,
+            'X_train_encode_scaled': X_train_encode_scaled,
+            'X_encoded_scaled' : X_encoded_scaled
+            })
 
-        st.session_state.update({
-        'X_test_encode_scaled': X_test_encode_scaled,
-        'X_train_encode_scaled': X_train_encode_scaled,
-        'X_encoded_scaled' : X_encoded_scaled
-        })
+        else:
 
-    else:
-        sup_scaler.fit(X_train[numerical_elements])
-        unsup_scaler.fit(X[numerical_elements])
+            sup_scaler.fit(X_train[numerical_elements])
+            unsup_scaler.fit(X[numerical_elements])
 
-        X_train_scaled =  scale_data(sup_scaler, X_train[numerical_elements])
-        X_test_scaled =  scale_data(sup_scaler, X_test[numerical_elements])
+            X_train_scaled =  scale_data(sup_scaler, X_train[numerical_elements])
+            X_test_scaled =  scale_data(sup_scaler, X_test[numerical_elements])
 
-        X_scaled = scale_data(unsup_scaler, X[numerical_elements])
+            X_scaled = scale_data(unsup_scaler, X[numerical_elements])
 
-        st.session_state.update({
-            'X_train_scaled': X_train_scaled,
-            'X_test_scaled': X_test_scaled,
-            'X_scaled' : X_scaled
-        })
+            st.session_state.update({
+                'X_train_scaled': X_train_scaled,
+                'X_test_scaled': X_test_scaled,
+                'X_scaled' : X_scaled
+            })
 
-    view_data = st.radio('**Preview Data**',
-                 ['Scaled Data', 'Unscaled Data', 'Compare'],
-                 captions = [
-                     'Show preview of scaled dataframe',
-                     'Show preview of unscaled data frame',
-                     'Preview both dataframes side-by-side'],
-                 horizontal = True
-                 )
+        view_data = st.radio('**Preview Data**',
+                     ['Scaled Data', 'Unscaled Data', 'Compare'],
+                     captions = [
+                         'Show preview of scaled dataframe',
+                         'Show preview of unscaled data frame',
+                         'Preview both dataframes side-by-side'],
+                     horizontal = True
+                     )
 
-    if st.session_state['encoder_on']:
+    if st.session_state['encoder_on'] and st.session_state['scaler_on']:
         if view_data == 'Scaled Data':
             st.dataframe(X_train_encode_scaled.head())
         elif view_data == 'Unscaled Data':
@@ -395,7 +409,7 @@ if data is not None:
                 st.dataframe(X_train_encoded.head())
 
 
-    else:
+    elif st.session_state['scaler_on']:
         if view_data == 'Scaled Data':
             st.dataframe(X_train_scaled.head())
         elif view_data == 'Unscaled Data':

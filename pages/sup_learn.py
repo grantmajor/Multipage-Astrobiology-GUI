@@ -51,11 +51,15 @@ if 'data_file_data' in st.session_state:
 
             st.divider()
 
-            data_options = {'Raw' : ('X_train', 'X_test'),
-                            'Scaled' : ('X_train_scaled', 'X_test_scaled')}
+            data_options = {'Raw' : ('X_train', 'X_test')}
 
-            if all(key in st.session_state for key in ['X_train_encode_scaled', 'X_test_encode_scaled']):
+            if st.session_state['encoder_on']:
                 data_options['Encoded'] = ('X_train_encoded', 'X_test_encoded')
+
+            if st.session_state['scaler_on']:
+                data_options['Scaled'] = ('X_train_scaled', 'X_test_scaled')
+
+            if st.session_state['encoder_on'] and st.session_state['scaler_on']:
                 data_options['Encoded & Scaled'] = ('X_train_encode_scaled', 'X_test_encode_scaled')
 
 
@@ -485,6 +489,9 @@ if 'data_file_data' in st.session_state:
                         y_train = label_encoder.fit_transform(y_train)
                         y_test = label_encoder.transform(y_test)
                     except ValueError as e:
+                        st.dataframe(y_test.head())
+                        st.info(type(y_train))
+
                         st.error(f"Label Encoding Failed: {e}")
                         st.stop()
 
