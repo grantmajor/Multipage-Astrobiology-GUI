@@ -130,26 +130,31 @@ if data is not None:
         st.warning("All possible variables have been selected. Deselect a variable to choose a target.")
 
     target = st.selectbox('Choose Target',
-                              options=unselected_elements,
-                              placeholder='Choose Option',
-
-                              )
+                          options=unselected_elements,
+                          placeholder='Choose Option'
+                          )
 
     if target != st.session_state['target']:
         st.session_state['target'] = target
+        try:
+            target_index = unselected_elements.index(target)
+
+        except ValueError as e:
+            print(f"Target not found: {e}")
 
 
-    if target is not None:
-        X = X[elements]
-        y = y[target]
-        if isinstance(y[1], numbers.Number):
-            st.session_state['target_is_number'] = True
-        else:
-            st.session_state['target_is_number'] = False
+        if target is not None:
+            X = X[elements]
+            y = y[target]
+            if isinstance(y[1], numbers.Number):
+                st.session_state['target_is_number'] = True
+            else:
+                st.session_state['target_is_number'] = False
 
-    if target in X:
-        st.warning("Overlapping target and explanatory variables detected.")
-        st.stop()
+
+        if target is not None and target in elements:
+            st.warning("Overlapping target and explanatory variables detected.")
+            st.stop()
 
 
     st.session_state.update({
@@ -303,8 +308,6 @@ if data is not None:
                 'X_encoded' : X_encoded
             })
 
-        else:
-            st.info("An encoder has not been selected.")
 
     else:
         st.warning("Encoding can only be used when categorical variables are selected.")

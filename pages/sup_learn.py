@@ -60,7 +60,7 @@ if 'data_file_data' in st.session_state:
 
 
             else:
-                st.error("Encoder not detected")
+                print('No encoder detected.')
 
             if all(key in st.session_state for key in ['X_train_red', 'X_test_red']):
                 data_options['PCA Reduced'] = ('X_train_red', 'X_test_red')
@@ -82,9 +82,13 @@ if 'data_file_data' in st.session_state:
             X_test = st.session_state[X_test_key]
 
             if data_form == 'Raw':
+                if not X_train.select_dtypes(exclude='number').empty or not X_test.select_dtypes(exclude='number').empty:
+                    st.warning("Non-numerical features will be dropped when handling raw data")
+
                 X_train = X_train.select_dtypes(include='number')
                 X_test = X_test.select_dtypes(include='number')
-                st.warning("Non-numerical features will be dropped when handling raw data")
+
+
 
             #Begin Regression Code -----------------------------------------------------------------------------------------
 
@@ -477,8 +481,12 @@ if 'data_file_data' in st.session_state:
 
                 if options_sup == "Classification":
                     label_encoder = LabelEncoder()
-                    y_train = label_encoder.fit_transform(y_train)
-                    y_test = label_encoder.transform(y_test)
+                    try:
+                        y_train = label_encoder.fit_transform(y_train)
+                        y_test = label_encoder.transform(y_test)
+                    except ValueError as e:
+                        st.error(f"Label Encoding Failed: {e}")
+                        st.stop()
 
                     # Store the encoder in session_state if needed for later inverse_transform
                     st.session_state["label_encoder"] = label_encoder
@@ -491,6 +499,8 @@ if 'data_file_data' in st.session_state:
                         y_pred = selected_model.predict(X_test)
 
                     except ValueError as e:
+                        st.write(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+                        st.write(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
                         st.error(f"Model fitting failed: {e}")
                         st.stop()
 
@@ -847,4 +857,5 @@ if 'data_file_data' in st.session_state:
     with pred_tab:
         st.text('Work in progress')
 
-        pred_data = st.file_uploader('Upload a prediction data file', type = 'csv')
+        pred_data = st.file_uploader('Upload a prediction data file', type='csv')
+
