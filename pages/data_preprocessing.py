@@ -121,7 +121,6 @@ if data is not None:
 
 
     elements = np.concatenate((numerical_elements, categorical_elements))
-
     y = data.dropna()
 
     # Filter out any already selected explanatory variables from the target options
@@ -155,7 +154,7 @@ if data is not None:
 
     # Assign X and y properly
     X = data[elements]
-    y = data[target]  
+    y = data[target]
 
     # Check target type
     if isinstance(y.iloc[0], numbers.Number):
@@ -196,15 +195,23 @@ if data is not None:
     st.divider()
     st.subheader('Encoding')
 
-    encoding_selection = st.selectbox("Select Encoding Technique for Categorical Variables",
-                 placeholder = "Choose Option",
-                 options = ['None', 'One-Hot', 'Ordinal', 'Target (Supervised Only)'],
-                 index = 0)
 
-    st.session_state['encoder_on'] = False
-    st.session_state['scaler_on'] = False
+    # Define the encoding options
+    encoding_options = ['None', 'One-Hot', 'Ordinal', 'Target (Supervised Only)']
 
-    # TODO: Encoder parameters
+
+    # Set the default encoding selection on first load
+    if 'encoding_selection' not in st.session_state:
+        st.session_state['encoding_selection'] = 'None'  # Default selection
+
+    # Display the selectbox using session_state as the key
+    encoding_selection = st.selectbox(
+        "Select Encoding Technique for Categorical Variables",
+        options=encoding_options,
+        index=encoding_options.index(st.session_state['encoding_selection']),
+        key='encoding_selection'
+    )
+
 
     #One Hot Encoding
 
@@ -232,6 +239,8 @@ if data is not None:
             sup_encoder = OneHotEncoder(sparse_output= False, handle_unknown='ignore')
             unsup_encoder = copy.deepcopy(sup_encoder)
 
+            st.session_state['sup_encoder'] = sup_encoder
+
             #fits encoder to training data
             sup_encoder.fit(X_train[categorical_elements])
             unsup_encoder.fit(X[categorical_elements])
@@ -246,13 +255,13 @@ if data is not None:
             #Encoding data for unsupervised learning portion
             X_encoded_cat = encode_data(unsup_encoder, X, categorical_elements, columns = True)
 
-            st.session_state['encoder_on'] = True
 
             #Ordinal Encoding
         elif encoding_selection == 'Ordinal':
             sup_encoder = OrdinalEncoder()
             unsup_encoder = copy.deepcopy(sup_encoder)
 
+            st.session_state['sup_encoder'] = sup_encoder
 
             sup_encoder.fit(X_train[categorical_elements])
             unsup_encoder.fit(X[categorical_elements])
@@ -269,8 +278,6 @@ if data is not None:
                 st.stop()
 
             X_encoded_cat = encode_data(unsup_encoder, X, categorical_elements, columns = True)
-
-            st.session_state['encoder_on'] = True
 
         #Target Encoding
         #TODO: Make it so that column names are retained after encoding
@@ -289,18 +296,17 @@ if data is not None:
             #Encode non-TTS split data
             X_encoded_cat = encode_data(unsup_encoder, X, categorical_elements, columns = False)
 
-            st.session_state['encoder_on'] = True
-
             X_train_encoded_cat.columns = X_train_encoded_cat.columns.astype(str)
             X_test_encoded_cat.columns = X_test_encoded_cat.columns.astype(str)
 
             X_encoded_cat.columns = X_encoded_cat.columns.astype(str)
 
         else:
-            st.session_state['encoder_on'] = False
+            encoding_selection = 'None'
+
 
         # Checks that an encoder has been selected
-        if st.session_state['encoder_on']:
+        if encoding_selection is not 'None':
 
             #Combine the encoded categorical variables with the numerical elements
             X_train_encoded = pd.concat([X_train[numerical_elements], X_train_encoded_cat], axis=1)
@@ -327,16 +333,37 @@ if data is not None:
     #Feature Scaling
     st.subheader('Feature Scaling')
 
+    scaler_options = ['None', 'Min-Max Scaling', 'Standardization']
 
-    scaler = st.selectbox('Select a Feature Scaling Technique', options = ['None', 'Min-Max Scaling', 'Standardization'], index=0)
+    # Set default scaler selection if not already in session_state
+    if 'scaler_selection' not in st.session_state:
+        st.session_state['scaler_selection'] = 'None'  # Default
+
+    # Create the selectbox using the session_state value
+    scaler = st.selectbox(
+        'Select a Feature Scaling Technique',
+        options=scaler_options,
+        index=scaler_options.index(st.session_state['scaler_selection']),
+        key='scaler_selection'
+    )
+
+    # Apply the selected scaler
     if scaler == 'Min-Max Scaling':
-        sup_scaler = MinMaxScaler()
-        unsup_scaler = copy.deepcopy(sup_scaler)
-        st.session_state['scaler_on'] = True
+        sup_encode_scaler = MinMaxScaler()
+        sup_raw_scaler = copy.deepcopy(sup_encode_scaler)
+
+        unsup_encode_scaler = copy.deepcopy(sup_encode_scaler)
+        unsup_scaler = copy.deepcopy(sup_encode_scaler)
+
     elif scaler == 'Standardization':
-        sup_scaler = StandardScaler()
-        unsup_scaler= copy.deepcopy(sup_scaler)
-        st.session_state['scaler_on'] = True
+        sup_encode_scaler = StandardScaler()
+        sup_raw_scaler = copy.deepcopy(sup_encode_scaler)
+
+        unsup_encode_scaler = copy.deepcopy(sup_encode_scaler)
+        unsup_scaler = copy.deepcopy(sup_encode_scaler)
+
+    else:
+        scaler = 'None'
 
 
     def scale_data(scaler, data):
@@ -346,44 +373,51 @@ if data is not None:
         :param data: Array-like form of data, will be scaled
         :return: A dataframe containing a scaled version of the 'data' parameter
         """
+
         return pd.DataFrame(scaler.transform(data),
                             columns = data.columns,
                             index = data.index)
 
-    if st.session_state['scaler_on']:
-        if st.session_state['encoder_on']:
+    #TODO: Rename scaler to scaler_selection to maintain variable naming consistency
+    if scaler is not 'None':
 
-            sup_scaler.fit(X_train_encoded)
-            unsup_scaler.fit(X_encoded)
+        #Scaled Data
+        sup_raw_scaler.fit(X_train[numerical_elements])
+        unsup_scaler.fit(X[numerical_elements])
 
-            #scaling TTS split data
-            X_train_encode_scaled = scale_data(sup_scaler, X_train_encoded)
-            X_test_encode_scaled = scale_data(sup_scaler, X_test_encoded)
+        #Transform scaled data
+        X_train_scaled = scale_data(sup_raw_scaler, X_train[numerical_elements])
+        X_test_scaled = scale_data(sup_raw_scaler, X_test[numerical_elements])
+        X_scaled = scale_data(unsup_scaler, X[numerical_elements])
 
-            #scaling non-TTS data
-            X_encoded_scaled = scale_data(unsup_scaler, X_encoded)
+        #Upload scaled data to session state
+        st.session_state.update({'X_train_scaled': X_train_scaled,
+                                 'X_test_scaled': X_test_scaled,
+                                 'X_scaled': X_scaled,
+                                 'sup_raw_scaler' : sup_raw_scaler})
 
+
+        #Scaled and Encoded Data
+        if encoding_selection is not 'None':
+
+            #Fit scalers to encoded data
+            sup_encode_scaler.fit(X_train_encoded)
+            unsup_encode_scaler.fit(X_encoded)
+
+
+            #Scaling encoded data
+            X_train_encode_scaled = scale_data(sup_encode_scaler, X_train_encoded)
+            X_test_encode_scaled = scale_data(sup_encode_scaler, X_test_encoded)
+            X_encoded_scaled = scale_data(unsup_encode_scaler, X_encoded)
+
+            #Uploading encoded and scaled data to session state
             st.session_state.update({
             'X_test_encode_scaled': X_test_encode_scaled,
             'X_train_encode_scaled': X_train_encode_scaled,
-            'X_encoded_scaled' : X_encoded_scaled
+            'X_encoded_scaled' : X_encoded_scaled,
+            'sup_encode_scaler': sup_encode_scaler
             })
 
-        else:
-
-            sup_scaler.fit(X_train[numerical_elements])
-            unsup_scaler.fit(X[numerical_elements])
-
-            X_train_scaled =  scale_data(sup_scaler, X_train[numerical_elements])
-            X_test_scaled =  scale_data(sup_scaler, X_test[numerical_elements])
-
-            X_scaled = scale_data(unsup_scaler, X[numerical_elements])
-
-            st.session_state.update({
-                'X_train_scaled': X_train_scaled,
-                'X_test_scaled': X_test_scaled,
-                'X_scaled' : X_scaled
-            })
 
         view_data = st.radio('**Preview Data**',
                      ['Scaled Data', 'Unscaled Data', 'Compare'],
@@ -394,34 +428,35 @@ if data is not None:
                      horizontal = True
                      )
 
-    if st.session_state['encoder_on'] and st.session_state['scaler_on']:
-        if view_data == 'Scaled Data':
-            st.dataframe(X_train_encode_scaled.head())
-        elif view_data == 'Unscaled Data':
-            st.dataframe(X_train_encoded.head())
-        else:
-            scale_col, unscale_col = columns(2, border = True)
-            with scale_col:
-                st.markdown("**Scaled Data**")
+
+        if encoding_selection is not 'None':
+            if view_data == 'Scaled Data':
                 st.dataframe(X_train_encode_scaled.head())
-            with unscale_col:
-                st.markdown("**Unscaled Data**")
+            elif view_data == 'Unscaled Data':
                 st.dataframe(X_train_encoded.head())
+            else:
+                scale_col, unscale_col = columns(2, border = True)
+                with scale_col:
+                    st.markdown("**Scaled Data**")
+                    st.dataframe(X_train_encode_scaled.head())
+                with unscale_col:
+                    st.markdown("**Unscaled Data**")
+                    st.dataframe(X_train_encoded.head())
 
 
-    elif st.session_state['scaler_on']:
-        if view_data == 'Scaled Data':
-            st.dataframe(X_train_scaled.head())
-        elif view_data == 'Unscaled Data':
-            st.dataframe(X_train[numerical_elements].head())
         else:
-            scale_col, unscale_col = columns(2, border = True)
-            with scale_col:
-                st.markdown("**Scaled Data**")
+            if view_data == 'Scaled Data':
                 st.dataframe(X_train_scaled.head())
-            with unscale_col:
-                st.markdown("**Unscaled Data**")
+            elif view_data == 'Unscaled Data':
                 st.dataframe(X_train[numerical_elements].head())
+            else:
+                scale_col, unscale_col = columns(2, border = True)
+                with scale_col:
+                    st.markdown("**Scaled Data**")
+                    st.dataframe(X_train_scaled.head())
+                with unscale_col:
+                    st.markdown("**Unscaled Data**")
+                    st.dataframe(X_train[numerical_elements].head())
 
 
 #End Scaling Code

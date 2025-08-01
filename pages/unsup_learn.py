@@ -184,7 +184,6 @@ if 'data_file_data' in st.session_state:
         clustering_method = st.selectbox(label='Select Cluster Method',
                                         options=['Kmeans',
                                                  'DBSCAN',
-                                                 'Target',
                                                  'Gaussian Mixture'])
 
         if clustering_method == 'Kmeans':
@@ -210,8 +209,7 @@ if 'data_file_data' in st.session_state:
             DBSCAN_labels = DBSCAN_labels.astype(str)
             labels = [outlier.replace('-1', 'Outlier') for outlier in DBSCAN_labels]
 
-        elif clustering_method == 'Target':
-            labels = y
+
 
         else:
             n_components = st.number_input('Enter number of components',

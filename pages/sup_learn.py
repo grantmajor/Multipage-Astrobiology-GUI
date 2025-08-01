@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import shap
 import streamlit as st
 import pandas as pd
@@ -53,13 +55,13 @@ if 'data_file_data' in st.session_state:
 
             data_options = {'Raw' : ('X_train', 'X_test')}
 
-            if st.session_state['encoder_on']:
+            if 'sup_encoder' in st.session_state:
                 data_options['Encoded'] = ('X_train_encoded', 'X_test_encoded')
 
-            if st.session_state['scaler_on']:
+            if 'sup_raw_scaler' in st.session_state:
                 data_options['Scaled'] = ('X_train_scaled', 'X_test_scaled')
 
-            if st.session_state['encoder_on'] and st.session_state['scaler_on']:
+            if 'sup_encoder' and 'sup_raw_scaler' in st.session_state:
                 data_options['Encoded & Scaled'] = ('X_train_encode_scaled', 'X_test_encode_scaled')
 
 
@@ -862,7 +864,57 @@ if 'data_file_data' in st.session_state:
             # End Model Metrics Code -------------------------------------------------------------------------------------------
 
     with pred_tab:
-        st.text('Work in progress')
-
+        pred_data = None
         pred_data = st.file_uploader('Upload a prediction data file', type='csv')
+
+        if pred_data is not None:
+
+            X_pred = pd.read_csv(pred_data)
+            X_pred_original = deepcopy(X_pred)
+            X_pred = X_pred.drop(columns=st.session_state['target'], errors='ignore')
+
+            if data_form in ['Raw', 'Scaled']:
+                X_pred = X_pred.select_dtypes(include='number')
+                X_pred = X_pred.drop(columns=st.session_state['target'], errors='ignore')
+
+                if data_form is 'Scaled':
+                    scaler = st.session_state['sup_raw_scaler']
+                    columns = X_train.drop(columns=st.session_state['target'], errors='ignore').columns
+                    scaled_array = scaler.transform(X_pred[columns])
+                    scaled_df = pd.DataFrame(scaled_array, columns=columns, index=X_pred.index)
+                    X_pred = scaled_df
+
+
+            else:
+                encoder = st.session_state['sup_encoder']
+                cat_features = st.session_state['cat_features']
+                encoded_cat = encoder.transform(X_pred[cat_features])
+
+                if hasattr(encoder, 'get_feature_names_out'):
+                    encoded_df = pd.DataFrame(encoded_cat, columns=encoder.get_feature_names_out(cat_features),
+                                              index=X_pred.index)
+
+
+                numeric_df = X_pred.drop(columns=cat_features)
+
+                # Step 4: Concatenate encoded + numeric features
+                X_pred = pd.concat([numeric_df, encoded_df], axis=1)
+                if data_form == 'Encoded & Scaled':
+                    scaler = st.session_state['sup_encode_scaler']
+                    columns = X_train.drop(columns=st.session_state['target'], errors='ignore').columns
+                    encoded_scaled_array = scaler.transform(X_pred[columns])
+                    encoded_scaled_df = pd.DataFrame(encoded_scaled_array, columns=columns, index=X_pred.index)
+                    X_pred = encoded_scaled_df
+
+
+            try:
+                predictions = selected_model.predict(X_pred)
+
+            except ValueError as e:
+                st.info(f"{e}")
+                st.stop()
+
+            
+            st.table(predictions)
+
 
