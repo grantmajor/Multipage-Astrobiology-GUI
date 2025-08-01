@@ -910,11 +910,32 @@ if 'data_file_data' in st.session_state:
             try:
                 predictions = selected_model.predict(X_pred)
 
+                #Adds predictions to original dataset
+                pred_series = pd.Series(predictions, name=st.session_state['target'], index=X_pred_original.index)
+                X_pred_with_preds = X_pred_original.copy()
+                X_pred_with_preds[st.session_state['target']] = pred_series
+
+                # Display and optionally allow download
+                st.subheader("Predictions")
+
+                view_pred = st.radio(label='Select Viewing Type',
+                                     options=['Predictions Only', 'Predictions w/ Dataset'],
+                                     captions=['Array of predictions', 'Predictions appended to original dataset'],
+                                     horizontal=True)
+
+                if view_pred is 'Predictions Only':
+                    st.dataframe(predictions)
+                else:
+                    st.dataframe(X_pred_with_preds)
+
+                # Optional: download button
+                csv = X_pred_with_preds.to_csv(index=False).encode('utf-8')
+                st.download_button("Download Predictions", data=csv, file_name="predictions.csv", mime="text/csv")
+
             except ValueError as e:
                 st.info(f"{e}")
                 st.stop()
 
-            
-            st.table(predictions)
+
 
 
