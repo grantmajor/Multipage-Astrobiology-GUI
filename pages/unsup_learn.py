@@ -34,7 +34,7 @@ if 'data_file_data' in st.session_state:
 
         data_choices = ['Raw', 'Scaled']
 
-        if st.session_state['encoder_on']:
+        if 'sup_encoder' in st.session_state:
             data_choices.append('Encoded')
             data_choices.append('Encoded & Scaled')
 

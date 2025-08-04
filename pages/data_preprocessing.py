@@ -110,10 +110,14 @@ if data is not None:
 
 
     non_num_elements = [col for col in data if col not in numerical_elements]
+    valid_previous_cat = [
+        col for col in st.session_state.get('cat_features', [])
+        if col in non_num_elements
+    ]
     categorical_elements = st.multiselect("Select Categorical Explanatory Variables",
                                           options=non_num_elements,
                                           placeholder='Choose Option',
-                                          default=st.session_state['cat_features']
+                                          key='cat_selector'
                                           )
 
     if list(categorical_elements) != list(st.session_state['cat_features']):
@@ -200,16 +204,11 @@ if data is not None:
     encoding_options = ['None', 'One-Hot', 'Ordinal', 'Target (Supervised Only)']
 
 
-    # Set the default encoding selection on first load
-    if 'encoding_selection' not in st.session_state:
-        st.session_state['encoding_selection'] = 'None'  # Default selection
-
     # Display the selectbox using session_state as the key
     encoding_selection = st.selectbox(
         "Select Encoding Technique for Categorical Variables",
         options=encoding_options,
-        index=encoding_options.index(st.session_state['encoding_selection']),
-        key='encoding_selection'
+        key='encoding_choice'
     )
 
 
@@ -335,15 +334,11 @@ if data is not None:
 
     scaler_options = ['None', 'Min-Max Scaling', 'Standardization']
 
-    # Set default scaler selection if not already in session_state
-    if 'scaler_selection' not in st.session_state:
-        st.session_state['scaler_selection'] = 'None'  # Default
 
     # Create the selectbox using the session_state value
     scaler = st.selectbox(
         'Select a Feature Scaling Technique',
         options=scaler_options,
-        index=scaler_options.index(st.session_state['scaler_selection']),
         key='scaler_selection'
     )
 
