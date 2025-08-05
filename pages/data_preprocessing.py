@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler, MaxAbsScaler, OneHotEncoder, \
     OrdinalEncoder, LabelEncoder, TargetEncoder
@@ -170,33 +171,99 @@ if data is not None:
             st.warning("Overlapping target and explanatory variables detected.")
             st.stop()
 
+    st.subheader("Train Test Split")
+    # Train-test split
+    train_proportion = st.number_input(
+        'Enter the Proportion of Data to be Allocated to Training.',
+        min_value=0.0,
+        value=0.75,
+        step=0.01,
+        format="%.2f",
+    )
 
-    st.session_state.update({
-        'X_raw' : X,
-        'y_raw' : y,
-    })
-
-    # Begin Train Test Split Code
-    train_proportion = st.number_input('Enter the Proportion of Data to be Allocated to Training.',
-                                       min_value=0.0,
-                                       value=0.75,
-                                       step=0.01,
-                                       format="%.2f", )
-    st.session_state['train_size'] = train_proportion
-    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_proportion)
-
-
-    st.session_state.update({
-        'X_train' : X_train,
-        'X_test' : X_test,
-        'y_train' : y_train,
-        'y_test' : y_test
-    })
-
-    # End Train Test Split Code
-
-    #Begin  Encoding Code
+    #Begin Imputation Code
     st.divider()
+
+    # Data Cleaning Section
+    st.subheader('Data Cleaning')
+    if X.isnull().values.any():
+        st.warning("Missing values detected. Data cleaning is strongly recommended.")
+
+        # Drop rows where target is missing — always safe
+        elements = [col for col in elements if col in data.columns]
+        if target not in data.columns:
+            st.error(f"Target column '{target}' not found in data.")
+        else:
+            full_df = data[elements + [target]].dropna(subset=[target])
+
+        # Select cleaning strategy
+        imputer_choices = ['Drop Values', 'Simple Imputer']
+        imputer_selector = st.selectbox(label='Select Imputation Method',
+                                        options=imputer_choices)
+
+        # Drop missing rows if selected
+        if imputer_selector == 'Drop Values':
+            full_df = full_df.dropna()
+
+        # Extract X and y from cleaned full_df
+        X = full_df[elements]
+        y = full_df[target]
+
+        st.session_state['train_size'] = train_proportion
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_proportion)
+
+        # Imputation if selected
+        if imputer_selector == 'Simple Imputer':
+            impute_strategy_map = {
+                'Mean': 'mean',
+                'Median': 'median',
+                'Most Frequent': 'most_frequent'
+            }
+
+            impute_strategy = st.radio(label='Imputing Strategy',
+                                       options=impute_strategy_map.keys(),
+                                       horizontal=True)
+
+            with st.spinner('Imputing Data'):
+                imputer = SimpleImputer(missing_values=np.nan,
+                                        strategy=impute_strategy_map[impute_strategy])
+                unsup_imputer = copy.deepcopy(imputer)
+
+                # Only fit on training data to avoid leakage
+                X_train = imputer.fit_transform(X_train)
+                X_test = imputer.transform(X_test)
+                X = imputer.transform(X)
+
+                # Check that imputation was successful
+                if (not np.isnan(X_train).any()
+                        and not np.isnan(X_test).any()
+                        and not np.isnan(X).any()):
+                    st.success('NaN values imputed successfully')
+                else:
+                    st.error('Imputing failed. NaN values still detected')
+
+            # Restore column structure after imputation
+            all_elements = np.concatenate((numerical_elements, categorical_elements))
+            X_train = pd.DataFrame(X_train, columns=all_elements, index=y_train.index)
+            X_test = pd.DataFrame(X_test, columns=all_elements, index=y_test.index)
+            X = pd.DataFrame(X, columns=all_elements, index=y.index)
+        else:
+            # If drop was selected, keep DataFrame structure
+            X_train = pd.DataFrame(X_train, columns=elements, index=y_train.index)
+            X_test = pd.DataFrame(X_test, columns=elements, index=y_test.index)
+            X = pd.DataFrame(X, columns=elements, index=y.index)
+
+        # Update session state
+        st.session_state.update({
+            'X_train': X_train,
+            'X_test': X_test,
+            'y_train': y_train,
+            'y_test': y_test,
+            'X_raw': X,
+            'y_raw': y
+        })
+    #Begin  Encoding Code
     st.subheader('Encoding')
 
 
@@ -305,7 +372,7 @@ if data is not None:
 
 
         # Checks that an encoder has been selected
-        if encoding_selection is not 'None':
+        if encoding_selection != 'None' and len(categorical_elements) > 0:
 
             #Combine the encoded categorical variables with the numerical elements
             X_train_encoded = pd.concat([X_train[numerical_elements], X_train_encoded_cat], axis=1)
@@ -316,6 +383,7 @@ if data is not None:
 
             if st.checkbox('Preview Encoded Data'):
                 st.dataframe(X_train_encoded.head())
+
 
 
             st.session_state.update({
@@ -374,7 +442,7 @@ if data is not None:
                             index = data.index)
 
     #TODO: Rename scaler to scaler_selection to maintain variable naming consistency
-    if scaler is not 'None':
+    if scaler != 'None':
 
         #Scaled Data
         sup_raw_scaler.fit(X_train[numerical_elements])
@@ -393,9 +461,13 @@ if data is not None:
 
 
         #Scaled and Encoded Data
-        if encoding_selection is not 'None':
+        if encoding_selection != 'None' and 'X_train_encoded' in st.session_state:
 
             #Fit scalers to encoded data
+
+            X_train_encoded = st.session_state['X_train_encoded']
+            X_test_encoded = st.session_state['X_test_encoded']
+            X_encoded = st.session_state['X_encoded']
             sup_encode_scaler.fit(X_train_encoded)
             unsup_encode_scaler.fit(X_encoded)
 
@@ -424,7 +496,7 @@ if data is not None:
                      )
 
 
-        if encoding_selection is not 'None':
+        if encoding_selection != 'None' and 'X_train_encoded' in st.session_state:
             if view_data == 'Scaled Data':
                 st.dataframe(X_train_encode_scaled.head())
             elif view_data == 'Unscaled Data':
@@ -452,8 +524,6 @@ if data is not None:
                 with unscale_col:
                     st.markdown("**Unscaled Data**")
                     st.dataframe(X_train[numerical_elements].head())
-
-
 #End Scaling Code
 
 #End Preprocessing Code

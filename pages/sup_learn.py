@@ -61,7 +61,7 @@ if 'data_file_data' in st.session_state:
             if 'sup_raw_scaler' in st.session_state:
                 data_options['Scaled'] = ('X_train_scaled', 'X_test_scaled')
 
-            if 'sup_encoder' and 'sup_raw_scaler' in st.session_state:
+            if 'X_train_encode_scaled' in st.session_state and 'sup_raw_scaler' in st.session_state:
                 data_options['Encoded & Scaled'] = ('X_train_encode_scaled', 'X_test_encode_scaled')
 
 
@@ -510,6 +510,10 @@ if 'data_file_data' in st.session_state:
                     except ValueError as e:
                         st.write(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
                         st.write(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+                        st.subheader("X train dataframe")
+                        st.dataframe(X_train)
+                        st.subheader("X test dataframe")
+                        st.dataframe(X_test)
                         st.error(f"Model fitting failed: {e}")
                         st.stop()
 
