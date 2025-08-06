@@ -32,33 +32,34 @@ if 'data_file_data' in st.session_state:
     random_state = 42
     with col1:
 
-        data_choices = ['Raw', 'Scaled']
+        data_choices = ['Raw']
 
-        if 'sup_encoder' in st.session_state:
+
+        if 'sup_raw_scaler' in st.session_state and 'X_scaled' in st.session_state:
+            data_choices.append('Scaled')
+        if 'sup_encoder' in st.session_state and 'X_encoded' in st.session_state:
             data_choices.append('Encoded')
-            data_choices.append('Encoded & Scaled')
+            if 'sup_encode_scaler' in st.session_state and 'X_encoded_scaled':
+                data_choices.append('Encoded & Scaled')
 
 
         data_form = st.radio(label='Select Form of Data',
-                             options=['Raw', 'Encoded', 'Scaled', 'Encoded & Scaled'],
-                             horizontal=True,
-                             captions=['Raw data',
-                                       'Encoded data ',
-                                       'Scaled data',
-                                       'Encoded and scaled data'])
+                             options=data_choices,
+                             horizontal=True)
 
         if data_form == 'Raw':
             X = st.session_state['X_raw']
             X = X.select_dtypes(include='number')
-            st.warning("Non-numerical features will be dropped when handling raw data")
+            if len(st.session_state['cat_features']) > 0:
+                st.warning("Non-numerical features will be dropped when handling raw data")
 
-        elif data_form == 'Encoded':
+        elif data_form == 'Encoded' and 'X_encoded' in st.session_state:
             X = st.session_state['X_encoded']
 
-        elif data_form == 'Scaled':
+        elif data_form == 'Scaled' and 'X_scaled' in st.session_state:
             X = st.session_state['X_scaled']
 
-        else:
+        elif 'X_encoded_scaled' in st.session_state:
             X = st.session_state['X_encoded_scaled']
 
         y = st.session_state['y_raw']
