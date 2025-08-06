@@ -185,11 +185,10 @@ if data is not None:
     st.divider()
 
     # Data Cleaning Section
-    st.subheader('Data Cleaning')
     if X.isnull().values.any():
-        st.warning("Missing values detected. Data cleaning is strongly recommended.")
+        st.subheader('Data Cleaning')
 
-        # Drop rows where target is missing — always safe
+        # Drop rows where target is missing
         elements = [col for col in elements if col in data.columns]
         if target not in data.columns:
             st.error(f"Target column '{target}' not found in data.")
@@ -226,19 +225,27 @@ if data is not None:
                                        horizontal=True)
 
             with st.spinner('Imputing Data'):
-                imputer = SimpleImputer(missing_values=np.nan,
-                                        strategy=impute_strategy_map[impute_strategy])
-                unsup_imputer = copy.deepcopy(imputer)
+                num_imputer = SimpleImputer(missing_values=np.nan,
+                                            strategy=impute_strategy_map[impute_strategy])
+                cat_imputer= SimpleImputer(missing_values=np.nan,
+                                           strategy='most_frequent')
+                unsup_num_imputer = copy.deepcopy(num_imputer)
+                unsup_cat_imputer = copy.deepcopy(cat_imputer)
 
                 # Only fit on training data to avoid leakage
-                X_train = imputer.fit_transform(X_train)
-                X_test = imputer.transform(X_test)
-                X = imputer.transform(X)
+                X_train[numerical_elements] = num_imputer.fit_transform(X_train[numerical_elements])
+                X_train[categorical_elements] = cat_imputer.fit_transform(X_train[categorical_elements])
+
+                X_test[numerical_elements] = num_imputer.transform(X_test[numerical_elements])
+                X_test[categorical_elements] = cat_imputer.transform(X_test[categorical_elements])
+
+                X[numerical_elements] = unsup_num_imputer.fit_transform(X[numerical_elements])
+                X[categorical_elements] = unsup_cat_imputer.fit_transform(X[categorical_elements])
 
                 # Check that imputation was successful
-                if (not np.isnan(X_train).any()
-                        and not np.isnan(X_test).any()
-                        and not np.isnan(X).any()):
+                if (not X_train.isnull().values.any()
+                        and not X_test.isnull().values.any()
+                        and not X.isnull().values.any()):
                     st.success('NaN values imputed successfully')
                 else:
                     st.error('Imputing failed. NaN values still detected')
@@ -266,7 +273,10 @@ if data is not None:
             'y_raw': y
 
         })
-    #Begin  Encoding Code
+    #End Data Cleaning Code
+
+
+    #Begin Encoding Code
     st.subheader('Encoding')
 
 
