@@ -491,10 +491,9 @@ if 'data_file_data' in st.session_state:
                         y_train = label_encoder.fit_transform(y_train)
                         y_test = label_encoder.transform(y_test)
                     except ValueError as e:
-                        st.dataframe(y_test.head())
-                        st.info(type(y_train))
-
-                        st.error(f"Label Encoding Failed: {e}")
+                        st.error("Label encoding failed, check prediction type.")
+                        if st.button('View Exception'):
+                            st.error(e)
                         st.stop()
 
                     # Store the encoder in session_state if needed for later inverse_transform

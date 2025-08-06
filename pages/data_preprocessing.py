@@ -252,9 +252,19 @@ if data is not None:
 
             # Restore column structure after imputation
             all_elements = np.concatenate((numerical_elements, categorical_elements))
-            X_train = pd.DataFrame(X_train, columns=all_elements, index=y_train.index)
-            X_test = pd.DataFrame(X_test, columns=all_elements, index=y_test.index)
-            X = pd.DataFrame(X, columns=all_elements, index=y.index)
+            X_train = pd.DataFrame(X_train, columns=all_elements)
+            X_test = pd.DataFrame(X_test, columns=all_elements)
+            X = pd.DataFrame(X, columns=all_elements)
+
+            # Re-align y values
+            X_train = X_train.dropna()
+            X_test = X_test.dropna()
+            X = X.dropna()
+
+            y_train = y_train.loc[X_train.index]
+            y_test = y_test.loc[X_test.index]
+            y = y.loc[X.index]
+
         else:
             # If drop was selected, keep DataFrame structure
             X_train = pd.DataFrame(X_train, columns=elements, index=y_train.index)
