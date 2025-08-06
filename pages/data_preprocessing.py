@@ -234,13 +234,14 @@ if data is not None:
 
                 # Only fit on training data to avoid leakage
                 X_train[numerical_elements] = num_imputer.fit_transform(X_train[numerical_elements])
-                X_train[categorical_elements] = cat_imputer.fit_transform(X_train[categorical_elements])
-
                 X_test[numerical_elements] = num_imputer.transform(X_test[numerical_elements])
-                X_test[categorical_elements] = cat_imputer.transform(X_test[categorical_elements])
-
                 X[numerical_elements] = unsup_num_imputer.fit_transform(X[numerical_elements])
-                X[categorical_elements] = unsup_cat_imputer.fit_transform(X[categorical_elements])
+
+                #only impute categorical features when they are selected
+                if len(categorical_elements) > 0:
+                    X_train[categorical_elements] = cat_imputer.fit_transform(X_train[categorical_elements])
+                    X[categorical_elements] = unsup_cat_imputer.fit_transform(X[categorical_elements])
+                    X_test[categorical_elements] = cat_imputer.transform(X_test[categorical_elements])
 
                 # Check that imputation was successful
                 if (not X_train.isnull().values.any()
