@@ -801,6 +801,15 @@ if 'data_file_data' in st.session_state:
                             with st.spinner("Generating SHAP values..."):
                                 model_type = type(selected_model)
                                 test_sample = X_test[:50] if len(X_test) > 50 else X_test
+
+                                if isinstance(X_train, np.ndarray):
+                                    X_train = pd.DataFrame(X_train,
+                                                           columns=[f'PC{i + 1}' for i in range(X_train.shape[1])],
+                                                           index=st.session_state['X_train_index'])
+                                    X_test = pd.DataFrame(X_test,
+                                                          columns=[f'PC{i + 1}' for i in range(X_test.shape[1])],
+                                                          index=st.session_state['X_test_index'])
+
                                 background_data = X_train.sample(n=min(100, len(X_train)), random_state=42)
 
                                 if model_type in [RandomForestClassifier, RandomForestRegressor,

@@ -257,11 +257,14 @@ if data is not None:
         # Update session state
         st.session_state.update({
             'X_train': X_train,
+            'X_train_index' : X_train.index,
             'X_test': X_test,
+            'X_test_index' : X_test.index,
             'y_train': y_train,
             'y_test': y_test,
             'X_raw': X,
             'y_raw': y
+
         })
     #Begin  Encoding Code
     st.subheader('Encoding')
