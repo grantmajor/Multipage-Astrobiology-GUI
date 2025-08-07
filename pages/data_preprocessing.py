@@ -187,7 +187,7 @@ if data is not None:
     # Data Cleaning Section
     if X.isnull().values.any():
         st.subheader('Data Cleaning')
-
+        nan_count = X.isnull().sum().sum()
         # Drop rows where target is missing
         elements = [col for col in elements if col in data.columns]
         if target not in data.columns:
@@ -203,6 +203,11 @@ if data is not None:
         # Drop missing rows if selected
         if imputer_selector == 'Drop Values':
             full_df = full_df.dropna()
+
+            if not full_df.isnull().values.any():
+                st.success(f"{nan_count} NaN values dropped successfully")
+            else:
+                st.error('Dropping failed. NaN values still detected')
 
         # Extract X and y from cleaned full_df
         X = full_df[elements]
@@ -234,27 +239,38 @@ if data is not None:
 
                 # Only fit on training data to avoid leakage
                 X_train[numerical_elements] = num_imputer.fit_transform(X_train[numerical_elements])
-                X_train[categorical_elements] = cat_imputer.fit_transform(X_train[categorical_elements])
-
                 X_test[numerical_elements] = num_imputer.transform(X_test[numerical_elements])
-                X_test[categorical_elements] = cat_imputer.transform(X_test[categorical_elements])
-
                 X[numerical_elements] = unsup_num_imputer.fit_transform(X[numerical_elements])
-                X[categorical_elements] = unsup_cat_imputer.fit_transform(X[categorical_elements])
+
+                #only impute categorical features when they are selected
+                if len(categorical_elements) > 0:
+                    X_train[categorical_elements] = cat_imputer.fit_transform(X_train[categorical_elements])
+                    X[categorical_elements] = unsup_cat_imputer.fit_transform(X[categorical_elements])
+                    X_test[categorical_elements] = cat_imputer.transform(X_test[categorical_elements])
 
                 # Check that imputation was successful
                 if (not X_train.isnull().values.any()
                         and not X_test.isnull().values.any()
                         and not X.isnull().values.any()):
-                    st.success('NaN values imputed successfully')
+                    st.success(f"{nan_count} NaN values imputed successfully")
                 else:
                     st.error('Imputing failed. NaN values still detected')
 
             # Restore column structure after imputation
             all_elements = np.concatenate((numerical_elements, categorical_elements))
-            X_train = pd.DataFrame(X_train, columns=all_elements, index=y_train.index)
-            X_test = pd.DataFrame(X_test, columns=all_elements, index=y_test.index)
-            X = pd.DataFrame(X, columns=all_elements, index=y.index)
+            X_train = pd.DataFrame(X_train, columns=all_elements)
+            X_test = pd.DataFrame(X_test, columns=all_elements)
+            X = pd.DataFrame(X, columns=all_elements)
+
+            # Re-align y values
+            X_train = X_train.dropna()
+            X_test = X_test.dropna()
+            X = X.dropna()
+
+            y_train = y_train.loc[X_train.index]
+            y_test = y_test.loc[X_test.index]
+            y = y.loc[X.index]
+
         else:
             # If drop was selected, keep DataFrame structure
             X_train = pd.DataFrame(X_train, columns=elements, index=y_train.index)

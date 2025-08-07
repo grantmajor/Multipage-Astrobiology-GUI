@@ -258,9 +258,9 @@ if 'data_file_data' in st.session_state:
                 # Sets degree to a default value in case kernel_type isn't polynomial and thus degree isn't declared
                 if kernel_selection == 'poly':
                     st.number_input('Input degree',
-                                    value = 3,
-                                    step = 1,
-                                    min_value =1)
+                                    value=3,
+                                    step=1,
+                                    min_value=0)
                 degree = 3
 
                 epsilon_value = st.number_input('Input epsilon value',
@@ -320,6 +320,12 @@ if 'data_file_data' in st.session_state:
                               'Radial Basis Function' : 'rbf'}
 
                 kernel_selection = kernel_map[kernel_choice]
+
+                if kernel_selection == 'poly':
+                    degree= st.number_input('Input Degree',
+                                            min_value= 0,
+                                            value=3,
+                                            step=1)
                 # Sets degree to a default value in case kernel_type isn't polynomial and thus degree isn't declared
                 degree = 3
 
@@ -491,10 +497,9 @@ if 'data_file_data' in st.session_state:
                         y_train = label_encoder.fit_transform(y_train)
                         y_test = label_encoder.transform(y_test)
                     except ValueError as e:
-                        st.dataframe(y_test.head())
-                        st.info(type(y_train))
-
-                        st.error(f"Label Encoding Failed: {e}")
+                        st.error("Label encoding failed, check prediction type.")
+                        if st.button('View Exception'):
+                            st.error(e)
                         st.stop()
 
                     # Store the encoder in session_state if needed for later inverse_transform
