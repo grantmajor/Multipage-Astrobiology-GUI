@@ -187,7 +187,7 @@ if data is not None:
     # Data Cleaning Section
     if X.isnull().values.any():
         st.subheader('Data Cleaning')
-
+        nan_count = X.isnull().sum().sum()
         # Drop rows where target is missing
         elements = [col for col in elements if col in data.columns]
         if target not in data.columns:
@@ -203,6 +203,11 @@ if data is not None:
         # Drop missing rows if selected
         if imputer_selector == 'Drop Values':
             full_df = full_df.dropna()
+
+            if not full_df.isnull().values.any():
+                st.success(f"{nan_count} NaN values dropped successfully")
+            else:
+                st.error('Dropping failed. NaN values still detected')
 
         # Extract X and y from cleaned full_df
         X = full_df[elements]
@@ -247,7 +252,7 @@ if data is not None:
                 if (not X_train.isnull().values.any()
                         and not X_test.isnull().values.any()
                         and not X.isnull().values.any()):
-                    st.success('NaN values imputed successfully')
+                    st.success(f"{nan_count} NaN values imputed successfully")
                 else:
                     st.error('Imputing failed. NaN values still detected')
 
