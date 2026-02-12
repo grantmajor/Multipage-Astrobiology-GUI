@@ -290,6 +290,19 @@ if data is not None:
 
         })
     #End Data Cleaning Code
+    else: 
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_proportion)
+        st.session_state.update({
+            'X_train': X_train,
+            'X_train_index' : X_train.index,
+            'X_test': X_test,
+            'X_test_index' : X_test.index,
+            'y_train': y_train,
+            'y_test': y_test,
+            'X_raw': X,
+            'y_raw': y
+
+        })
 
 
     #Begin Encoding Code
