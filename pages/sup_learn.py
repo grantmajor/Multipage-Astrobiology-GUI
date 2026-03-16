@@ -48,8 +48,12 @@ if 'data_file_data' in st.session_state:
         with col1:
 
             options_sup = st.selectbox(label='Select Prediction Type',
-                                       options=['Classification',
-                                                'Regression'])
+                                        options=['Classification',
+                                                'Regression'],
+                                        help="Classification and regression are the most common types of supervised learning. Classification " \
+                                        "seeks to predict separate categories while regression predicts continuous values. Read more about clasification " \
+                                        "and regression [here.](https://www.ibm.com/think/topics/classification-vs-regression)"
+                                        )
 
             st.divider()
 
@@ -478,7 +482,11 @@ if 'data_file_data' in st.session_state:
 
 
 
-                model_choice = st.selectbox('Choose Classification Algorithm', list(model_display_names.keys()))
+                model_choice = st.selectbox('Choose Classification Algorithm', 
+                                            list(model_display_names.keys()),
+                                            help="Choosing an ML model is heavily reliant on the structure of your data. Each model " \
+                                            "has its own strengths and weaknesses and provides different use cases. " \
+                                            "Read more about model selection [here.](https://www.ibm.com/think/topics/model-selection)")
                 selected_model = model_display_names[model_choice]()
 
 
@@ -557,7 +565,6 @@ if 'data_file_data' in st.session_state:
 
                 #Begin Model Comparison History Code ------------------------------------------------------------------
                 with st.expander('Model Comparison History'):
-                    st.text(st.session_state['model_comparison_history'])
                     history_df = pd.DataFrame(st.session_state['model_comparison_history'])
 
                     if not history_df.empty and 'Metrics' in history_df.columns and history_df[
