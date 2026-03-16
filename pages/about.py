@@ -12,3 +12,19 @@ st.markdown(
 st.markdown('Developed by Floyd Nichols and Grant Major')
 st.markdown('email: floydnichols@vt.edu\n\n'
             'email: grantmajor@vt.edu')
+
+st.divider()
+st.subheader("Machine Learning Workflow")
+with st.container(horizontal_alignment="center"):
+    st.image("assets\ML_Steps.png")
+
+with st.expander("Exploratory Data Analysis"):
+    st.write("EDA...")
+with st.expander("Data Preprocessing"):
+    st.write("Data preprocessing...")
+with st.expander("Model Selection"):
+    st.write("Model selection...")
+with st.expander("Hyperparameter Tuning"):
+    st.write("Hyperparameter tuning...")
+with st.expander("Model Evaluation"):
+    st.write("Model evaluation...")

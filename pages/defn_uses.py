@@ -46,7 +46,7 @@ with general_terms_tab:
     #Underfitting
     with st.expander('What is Underfitting?'):
         st.markdown("Underfit models perform poorly on their training set and on unseen data. Underfitting is typically a symptom "
-                    "of models that are too simple to recognize relationships and patters in data.")
+                    "of models that are too simple to recognize relationships and patterns in data.")
 #End General Terms Tab
 
 #Begin Preprocessing Tab

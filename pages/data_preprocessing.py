@@ -15,7 +15,11 @@ import hashlib
 
 # Begin Data Upload Code
 st.subheader('Data')
-data_file = st.file_uploader('Upload a data file', type='csv', key='data_file')
+data_file = st.file_uploader('Upload a data file', 
+                             type='csv', 
+                             key='data_file'
+                             )
+
 
 
 def get_file_hash(uploaded_file):
@@ -67,7 +71,10 @@ if data is not None:
     display_choice = st.radio('',
                               options=['Data',
                                        'Correlation Matrix'],
-                              horizontal=True)
+                              horizontal=True,
+                              help="Correlation matrices measure the strength and direction of linear relationships between pairs of variables."
+                              " High correlation between independent variables is a potential indicator of multicollinearity. This can result in larger standard errors and difficulty interpreting each variable's " \
+                              "effect on the model's output, particularly in linear models. Read more about it [here.](https://www.ibm.com/think/topics/multicollinearity)")
 
     if display_choice == 'Data':
         st.markdown('**Data Preview**')
@@ -103,7 +110,9 @@ if data is not None:
     numerical_elements = st.multiselect("Select Numerical Explanatory Variables (default is all numerical columns)",
                                   options=X_num.columns,
                                   placeholder='Choose Option',
-                                  default=st.session_state['num_features']
+                                  default=st.session_state['num_features'],
+                                  help="Explanatory variables allow the model to uncover relationships between the data and its labels. " \
+                                  "Read more about ML basics [here.](https://www.ibm.com/think/topics/supervised-learning#1509394340)"
                                 )
 
     if list(numerical_elements) != list(st.session_state['num_features']):
@@ -118,7 +127,11 @@ if data is not None:
     categorical_elements = st.multiselect("Select Categorical Explanatory Variables",
                                           options=non_num_elements,
                                           placeholder='Choose Option',
-                                          key='cat_selector'
+                                          key='cat_selector',
+                                          help="Categorical variables must be handled differently than numerical variables. " \
+                                          "ML models use mathematical operations to process data which requires categorical " \
+                                          "variables to be represented in a numerical format. We separate categorical variables " \
+                                          "from numerical variables to allow for data engineering. Read more about data engineering [here.](https://www.ibm.com/think/topics/feature-engineering)"
                                           )
 
     if list(categorical_elements) != list(st.session_state['cat_features']):
@@ -146,7 +159,10 @@ if data is not None:
     target = st.selectbox(
         'Select Target',
         options=unselected_elements,
-        index=unselected_elements.index(default_target)
+        index=unselected_elements.index(default_target),
+        help="The target is the variable that the model seeks to predict. The model is tasked with " \
+        "finding relationships between explanatory variables and the target. Read more about the roles of each variable "
+        "[here.](https://www.ibm.com/think/topics/feature-selection)"
     )
 
     # Save the selected target to session state
@@ -179,6 +195,10 @@ if data is not None:
         value=0.75,
         step=0.01,
         format="%.2f",
+        help="Train Test Split (TTS) is a near-ubiquitous practice that segments data into a test and training set. " \
+        "Typically, the training set consists of 70-80% of the total dataset. This subset is used to train the model. " \
+        "The test set usually contains 20-30% of the total data and is used to evaluate the performance of the model. " \
+        "Read more about train test split [here.](https://developers.google.com/machine-learning/crash-course/overfitting/dividing-datasets)"
     )
 
     #Begin Imputation Code
@@ -198,8 +218,11 @@ if data is not None:
         # Select cleaning strategy
         imputer_choices = ['Drop Values', 'Simple Imputer']
         imputer_selector = st.selectbox(label='Select Imputation Method',
-                                        options=imputer_choices)
-
+                                        options=imputer_choices,
+                                        help="When datasets contain missing or null values, we can choose to impute or drop these entries. Dropping entries with "
+                                        "missing values results in the loss of some of the dataset's original information. Imputation provides a way to mitigate data loss. "
+                                        "Scikit-learn's simple imputer allows for missing entries to be inferred from other points in the dataset. " \
+                                        "Read more about Scikit-learn's simple imputer [here.] (https://scikit-learn.org/stable/modules/impute.html)")
         # Drop missing rows if selected
         if imputer_selector == 'Drop Values':
             full_df = full_df.dropna()
@@ -227,7 +250,10 @@ if data is not None:
 
             impute_strategy = st.radio(label='Imputing Strategy',
                                        options=impute_strategy_map.keys(),
-                                       horizontal=True)
+                                       horizontal=True,
+                                       help="Scikit-learn's simple imputer offers three core imputing strategies: mean, median, and most frequent. These " \
+                                       "imputation strategies replace the missing/null values with the mean, median, and mode of the columns respectively. " \
+                                       "Read more about how simple imputation works in Scikit-learn [here.](https://scikit-learn.org/stable/modules/generated/sklearn.impute.SimpleImputer.html#sklearn.impute.SimpleImputer)")
 
             with st.spinner('Imputing Data'):
                 num_imputer = SimpleImputer(missing_values=np.nan,
@@ -317,7 +343,9 @@ if data is not None:
     encoding_selection = st.selectbox(
         "Select Encoding Technique for Categorical Variables",
         options=encoding_options,
-        key='encoding_choice'
+        key='encoding_choice',
+        help="Encoding is a popular ML technique used to convert categorical variables into numerical variables. Each form of "
+        "encoding has its own strengths and use cases. Read more about one-hot encoding [here.](https://developers.google.com/machine-learning/crash-course/categorical-data/one-hot-encoding)"
     )
 
 
@@ -449,7 +477,12 @@ if data is not None:
     scaler = st.selectbox(
         'Select a Feature Scaling Technique',
         options=scaler_options,
-        key='scaler_selection'
+        key='scaler_selection',
+        help="Feature scaling is a feature standardization technique that seeks to equalize " \
+        "the scales of variables in the dataset. This prevents features with a wide range of values " \
+        "from dominating the model. Min-max scaling scales the data to ensure that each variable is in [0, 1]. " \
+        "Standardization scales the data such that the mean of each variable is 0 and the standard deviation is 1. " \
+        "Read more about scaling [here.](https://www.ibm.com/think/topics/feature-engineering)  "
     )
 
     # Apply the selected scaler

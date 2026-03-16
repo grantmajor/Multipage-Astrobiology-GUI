@@ -527,7 +527,8 @@ if 'data_file_data' in st.session_state:
                     st.stop()
 
 
-                if st.session_state.get("target_is_number", True):
+                if options_sup == "Regression":
+                #st.session_state.get("target_is_number", True):
                     metrics = {
                             'MSE' : mean_squared_error(y_test, y_pred),
                             'RMSE' : root_mean_squared_error(y_test, y_pred),
@@ -537,7 +538,7 @@ if 'data_file_data' in st.session_state:
 
                     display_cols = list(metrics.keys())
                     is_regression = True
-                else:
+                elif options_sup == "Classification":
                     metrics = {
                         'Accuracy': accuracy_score(y_test, y_pred),
                         'F1': f1_score(y_test, y_pred, average='weighted'),
@@ -556,6 +557,7 @@ if 'data_file_data' in st.session_state:
 
                 #Begin Model Comparison History Code ------------------------------------------------------------------
                 with st.expander('Model Comparison History'):
+                    st.text(st.session_state['model_comparison_history'])
                     history_df = pd.DataFrame(st.session_state['model_comparison_history'])
 
                     if not history_df.empty and 'Metrics' in history_df.columns and history_df[
