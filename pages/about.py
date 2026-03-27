@@ -16,7 +16,7 @@ st.markdown('email: floydnichols@vt.edu\n\n'
 st.divider()
 st.subheader("Machine Learning Workflow")
 with st.container(horizontal_alignment="center"):
-    st.image("assets\ML_Steps.png")
+    st.image("assets/ML_Steps.png")
 
 with st.expander("Exploratory Data Analysis"):
     st.write("EDA...")

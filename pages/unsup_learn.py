@@ -53,6 +53,8 @@ if 'data_file_data' in st.session_state:
             if len(st.session_state['cat_features']) > 0:
                 st.warning("Non-numerical features will be dropped when handling raw data")
 
+
+
         elif data_form == 'Encoded' and 'X_encoded' in st.session_state:
             X = st.session_state['X_encoded']
 
@@ -268,6 +270,20 @@ if 'data_file_data' in st.session_state:
         # Plot PCA Results
         elif dim_reduction_method == 'Standard PCA':
             st.subheader('Principal Component Analysis')
+            with st.expander(label='PCA Loadings'):
+
+                pca_loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
+                plt.figure()
+
+                sns.heatmap(pca_loadings,
+                            annot=True,
+                            cmap='coolwarm',
+                            yticklabels=X.columns
+                            )
+                plt.title("PCA Loadings")
+                st.pyplot(plt)
+
+
             fig, ax = plt.subplots()
             PCA_df = pd.DataFrame({'PCA_1': X_transformed[:, 0],
                                    'PCA_2': X_transformed[:, 1],
@@ -290,7 +306,7 @@ if 'data_file_data' in st.session_state:
             ax.legend(bbox_to_anchor=(0.8, 0.95),
                       loc=2,
                       borderaxespad=0.0)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='content')
 
             # Define and Plot Explained Variance Ratio
             fig, ax = plt.subplots()
@@ -316,6 +332,7 @@ if 'data_file_data' in st.session_state:
                       loc=2,
                       borderaxespad=0.0)
             st.plotly_chart(fig, use_container_width=True)
+
 
         elif dim_reduction_method == 'Multidimensional Scaling':
             st.subheader('Multidimensional Scaling')
