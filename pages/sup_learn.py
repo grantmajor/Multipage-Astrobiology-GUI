@@ -20,6 +20,7 @@ from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 from sklearn.utils.validation import check_is_fitted
 import seaborn as sns
 
+
 st.title('Supervised Learning')
 
 
@@ -490,14 +491,33 @@ if 'data_file_data' in st.session_state:
                 selected_model = model_display_names[model_choice]()
 
 
-                    # End Classification Code --------------------------------------------------------------------------
+             # End Classification Code --------------------------------------------------------------------------
             st.session_state['unfitted_model'] = selected_model
+
+            # Reset training flag if model selection changed
+            current_model_type = selected_model.__class__.__name__
+            if st.session_state.get('last_trained_model_type') != current_model_type:
+                st.session_state['model_trained'] = False
+                st.session_state['last_trained_model_type'] = current_model_type
+
+            # Add button to train model
+            train_button = st.button('Train Model', key='train_button')
+            if train_button:
+                st.session_state['model_trained'] = True
+                st.session_state['trained_model'] = selected_model.fit(X_train, y_train)
+                st.session_state['last_trained_model_type'] = current_model_type
+                st.success('Model trained successfully!')
 
             # End Model Training Code ------------------------------------------------------------------------------------------
 
             # Begin Model Metrics Code -----------------------------------------------------------------------------------------
             with col2:
                 st.subheader("Model Performance Metrics")
+
+                # Check if model has been trained
+                if not st.session_state.get('model_trained', False):
+                    st.info('Please click "Train Model" to train the model before viewing metrics.')
+                    st.stop()
 
                 if options_sup == "Classification":
                     label_encoder = LabelEncoder()
@@ -513,24 +533,17 @@ if 'data_file_data' in st.session_state:
                     # Store the encoder in session_state if needed for later inverse_transform
                     st.session_state["label_encoder"] = label_encoder
 
+                trained_model = st.session_state.get('trained_model')
                 try:
-                    y_pred = selected_model.predict(X_test)
-                except NotFittedError:
-                    try:
-                        selected_model.fit(X_train, y_train)
-                        y_pred = selected_model.predict(X_test)
-
-                    except ValueError as e:
-                        st.write(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-                        st.write(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-                        st.subheader("X train dataframe")
-                        st.dataframe(X_train)
-                        st.subheader("X test dataframe")
-                        st.dataframe(X_test)
-                        st.error(f"Model fitting failed: {e}")
-                        st.stop()
+                    y_pred = trained_model.predict(X_test)
 
                 except ValueError as e:
+                    st.write(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+                    st.write(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+                    st.subheader("X train dataframe")
+                    st.dataframe(X_train)
+                    st.subheader("X test dataframe")
+                    st.dataframe(X_test)
                     st.error(f"Prediction failed: {e}")
                     st.stop()
 
@@ -679,7 +692,7 @@ if 'data_file_data' in st.session_state:
                 #Begin Classification Metrics ------------------------------------------------------------------------------
                 if options_sup == 'Classification':
                     try:
-                        check_is_fitted(selected_model)
+                        check_is_fitted(trained_model)
                     except NotFittedError as e:
                         st.warning(f'Model has not been fitted to data. Metrics cannot be shown. {e}')
 
